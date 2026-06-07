@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="ur" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>دارالعلوم اسلامیہ عربیہ تلوجہ</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1a5c2e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="تلوجہ">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;600;700&family=Amiri:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --green:#1a5c2e; --gl:#2d8a47; --gp:#e8f5ec;
+  --gold:#c8952a; --dark:#0f1f13; --white:#fefefe;
+  --gray:#f2f5f2; --border:#c5ddc9; --red:#b52a2a; --blue:#1a3e6b;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Noto Nastaliq Urdu',serif;background:var(--gray);color:var(--dark);min-height:100vh;direction:rtl;}
+
+/* LOADING */
+#loadingPage{min-height:100vh;display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(135deg,var(--dark) 0%,var(--green) 60%,var(--gold) 100%);}
+.loading-box{text-align:center;color:white;}
+.loading-logo{font-size:60px;margin-bottom:16px;animation:pulse 1.5s infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.5;}}
+.loading-text{font-size:18px;font-weight:700;}
+.loading-sub{font-size:13px;opacity:.7;margin-top:6px;}
+
+/* LOGIN */
+#loginPage{min-height:100vh;display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(135deg,var(--dark) 0%,var(--green) 60%,var(--gold) 100%);position:relative;overflow:hidden;display:none;}
+#loginPage::before{content:'☪';position:absolute;font-size:400px;opacity:0.04;color:white;top:-80px;left:-80px;}
+.login-box{background:rgba(255,255,255,0.97);border-radius:20px;padding:44px 36px;width:400px;max-width:95vw;
+  box-shadow:0 30px 80px rgba(0,0,0,0.35);text-align:center;position:relative;z-index:1;}
+.login-logo{width:68px;height:68px;background:var(--green);border-radius:50%;display:flex;align-items:center;
+  justify-content:center;margin:0 auto 14px;font-size:30px;box-shadow:0 4px 20px rgba(26,92,46,0.3);}
+.login-title{font-size:20px;font-weight:700;color:var(--green);margin-bottom:3px;}
+.login-sub{font-size:12px;color:#888;margin-bottom:8px;font-family:'Amiri',serif;}
+.role-pill{display:inline-block;background:#fef3d0;color:#8a5f00;border-radius:20px;
+  padding:3px 14px;font-size:12px;margin-bottom:22px;}
+.login-box input{width:100%;padding:12px 15px;border:2px solid var(--border);border-radius:10px;
+  font-family:'Noto Nastaliq Urdu',serif;font-size:14px;margin-bottom:12px;outline:none;
+  transition:border .2s;text-align:right;direction:rtl;}
+.login-box input:focus{border-color:var(--green);}
+.login-box button{width:100%;padding:13px;background:var(--green);color:white;border:none;border-radius:10px;
+  font-family:'Noto Nastaliq Urdu',serif;font-size:16px;font-weight:700;cursor:pointer;transition:all .2s;}
+.login-box button:hover{background:var(--gl);}
+.login-err{color:var(--red);font-size:13px;margin-top:8px;display:none;}
+.sync-status{font-size:11px;color:#888;margin-top:6px;}
+.sync-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#ccc;margin-left:4px;}
+.sync-dot.online{background:#1a8c3a;} .sync-dot.syncing{background:#c8952a;animation:pulse 1s infinite;}
+
+/* APP */
+#app{display:none;}
+.topbar{background:var(--green);color:white;padding:0 24px;height:58px;display:flex;align-items:center;
+  justify-content:space-between;box-shadow:0 2px 12px rgba(0,0,0,.2);position:sticky;top:0;z-index:100;}
+.topbar-title{font-size:17px;font-weight:700;}
+.topbar-right{display:flex;align-items:center;gap:10px;font-size:13px;opacity:.9;}
+.logout-btn{background:rgba(255,255,255,.18);border:none;color:white;padding:5px 12px;border-radius:7px;
+  cursor:pointer;font-family:'Noto Nastaliq Urdu',serif;font-size:13px;}
+.logout-btn:hover{background:rgba(255,255,255,.3);}
+
+.main{max-width:1100px;margin:0 auto;padding:24px 16px;}
+
+/* TABS */
+.tabs{display:flex;gap:8px;margin-bottom:22px;flex-wrap:wrap;}
+.tab-btn{padding:9px 20px;border-radius:10px;border:2px solid var(--border);background:white;
+  font-family:'Noto Nastaliq Urdu',serif;font-size:14px;cursor:pointer;font-weight:600;transition:all .2s;}
+.tab-btn.active{background:var(--green);color:white;border-color:var(--green);}
+.tab-btn:hover:not(.active){border-color:var(--green);color:var(--green);}
+
+/* CARD */
+.card{background:white;border-radius:14px;padding:22px;margin-bottom:18px;
+  box-shadow:0 2px 10px rgba(0,0,0,.06);border:1px solid var(--border);}
+.card-title{font-size:16px;font-weight:700;color:var(--green);margin-bottom:16px;
+  padding-bottom:10px;border-bottom:2px solid var(--gp);display:flex;align-items:center;gap:8px;}
+
+/* FORM */
+.form-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;}
+.fg{flex:1;min-width:160px;}
+.fg label{display:block;font-size:12px;color:#555;margin-bottom:5px;font-weight:600;}
+.fg input,.fg select,.fg textarea{width:100%;padding:9px 12px;border:2px solid var(--border);border-radius:8px;
+  font-family:'Noto Nastaliq Urdu',serif;font-size:13px;outline:none;transition:border .2s;
+  background:white;color:var(--dark);direction:rtl;}
+.fg input:focus,.fg select:focus,.fg textarea:focus{border-color:var(--green);}
+
+/* BUTTONS */
+.btn{padding:9px 20px;border-radius:8px;border:none;font-family:'Noto Nastaliq Urdu',serif;
+  font-size:14px;cursor:pointer;font-weight:700;transition:all .2s;}
+.btn-green{background:var(--green);color:white;}
+.btn-green:hover{background:var(--gl);}
+.btn-gold{background:var(--gold);color:white;}
+.btn-red{background:var(--red);color:white;}
+.btn-blue{background:var(--blue);color:white;}
+.btn-sm{padding:5px 12px;font-size:12px;}
+.btn-xs{padding:3px 9px;font-size:11px;}
+
+/* TABLE */
+.tbl-wrap{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;font-size:13px;}
+thead tr{background:var(--green);color:white;}
+thead th{padding:10px 12px;text-align:right;font-weight:600;white-space:nowrap;}
+tbody tr{border-bottom:1px solid var(--border);}
+tbody tr:hover{background:var(--gp);}
+tbody td{padding:9px 12px;text-align:right;vertical-align:middle;}
+.badge{display:inline-block;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:700;}
+.bg{background:#d4edda;color:#1a5c2e;} .bb{background:#d0e4f7;color:#1a3e6b;}
+.br{background:#fde0e0;color:#b52a2a;} .bo{background:#fef3d0;color:#8a5f00;}
+
+/* STATS */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:20px;}
+.stat-box{background:white;border-radius:12px;padding:16px;border:1px solid var(--border);text-align:center;}
+.stat-num{font-size:30px;font-weight:700;color:var(--green);font-family:'Amiri',serif;}
+.stat-label{font-size:12px;color:#777;margin-top:3px;}
+
+/* NAMAZ CHART */
+.namaz-header{background:var(--green);color:white;text-align:center;padding:14px;border-radius:10px 10px 0 0;font-size:16px;font-weight:700;}
+.namaz-subheader{background:#e8f5ec;padding:10px 16px;display:flex;gap:20px;flex-wrap:wrap;border-bottom:1px solid var(--border);}
+.namaz-subheader span{font-size:13px;color:#333;}
+.namaz-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:0 0 10px 10px;}
+.namaz-table{border-collapse:collapse;font-size:12px;min-width:900px;}
+.namaz-table th,.namaz-table td{border:1px solid #d0e0d0;padding:6px 8px;text-align:center;white-space:nowrap;}
+.namaz-table thead tr:first-child th{background:var(--green);color:white;font-size:13px;}
+.namaz-table tbody .row-label{background:#f0f8f0;font-weight:700;font-size:12px;text-align:right;padding:6px 10px;white-space:nowrap;}
+.namaz-table tbody .sub-label{background:#f7fbf7;font-size:11px;color:#555;text-align:right;padding:5px 10px;}
+.namaz-table .group-header{background:#c8dece;font-weight:700;font-size:12px;color:var(--green);}
+.check-cell{cursor:pointer;font-size:16px;transition:transform .1s;}
+.check-cell:hover{transform:scale(1.3);}
+.c-yes{color:#1a8c3a;} .c-no{color:#cc2222;} .c-empty{color:#ccc;}
+.section-head{font-size:14px;font-weight:700;color:var(--blue);margin:18px 0 10px;
+  padding:7px 12px;background:#eef4ff;border-radius:7px;border-right:4px solid var(--blue);}
+.class-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;}
+.class-card{background:white;border-radius:12px;padding:16px;border:2px solid var(--border);
+  position:relative;transition:all .2s;}
+.class-card:hover{border-color:var(--green);box-shadow:0 6px 20px rgba(26,92,46,.1);}
+.cc-name{font-size:15px;font-weight:700;color:var(--green);margin-bottom:4px;}
+.cc-info{font-size:11px;color:#888;}
+.cc-del{position:absolute;top:8px;left:8px;background:#fde0e0;border:none;border-radius:5px;
+  width:24px;height:24px;cursor:pointer;color:var(--red);font-size:13px;display:flex;align-items:center;justify-content:center;}
+.toast{position:fixed;bottom:22px;right:22px;background:var(--green);color:white;
+  padding:11px 20px;border-radius:10px;font-size:13px;font-weight:600;
+  box-shadow:0 6px 20px rgba(0,0,0,.2);z-index:999;display:none;}
+.empty{text-align:center;padding:36px;color:#aaa;font-size:14px;}
+
+/* MODAL */
+.ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center;}
+.ov.open{display:flex;}
+.modal{background:white;border-radius:16px;padding:28px;width:520px;max-width:95vw;
+  box-shadow:0 30px 80px rgba(0,0,0,.25);max-height:90vh;overflow-y:auto;}
+.modal-title{font-size:17px;font-weight:700;color:var(--green);margin-bottom:18px;}
+.modal-footer{display:flex;gap:8px;justify-content:flex-end;margin-top:18px;}
+
+/* WA */
+.wa-btn{background:#25d366;color:white;border:none;padding:10px 22px;border-radius:9px;
+  font-family:'Noto Nastaliq Urdu',serif;font-size:14px;cursor:pointer;font-weight:700;}
+.wa-btn:hover{background:#1db954;}
+.wa-tpl{background:#e8f5e9;border:1px solid #a5d6a7;border-radius:10px;padding:14px;
+  font-size:13px;line-height:2;color:#1b5e20;margin:10px 0;white-space:pre-line;}
+</style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div id="loadingPage">
+  <div class="loading-box">
+    <div class="loading-logo">🕌</div>
+    <div class="loading-text">دارالعلوم تلوجہ</div>
+    <div class="loading-sub">لوڈ ہو رہا ہے...</div>
+  </div>
+</div>
+
+<!-- LOGIN -->
+<div id="loginPage">
+  <div class="login-box">
+    <div class="login-logo">🕌</div>
+    <div class="login-title">دارالعلوم اسلامیہ عربیہ تلوجہ</div>
+    <div class="login-sub">Darul Uloom Islamia Arabia Taloja</div>
+    <div class="role-pill" id="loginBadge">لاگ ان کریں</div>
+    <input type="text" id="lid" placeholder="آئی ڈی درج کریں" />
+    <input type="password" id="lpass" placeholder="پاس ورڈ درج کریں" onkeydown="if(event.key==='Enter')doLogin()" />
+    <button onclick="doLogin()">داخل ہوں ←</button>
+    <div class="login-err" id="lerr">آئی ڈی یا پاس ورڈ غلط ہے</div>
+    <div class="sync-status" id="syncStatus">
+      <span class="sync-dot online" id="syncDot"></span> Firebase سے منسلک
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <div class="topbar">
+    <div class="topbar-title">🕌 دارالعلوم تلوجہ</div>
+    <div class="topbar-right">
+      <span class="sync-dot online" id="appSyncDot" title="آن لائن"></span>
+      <span id="uLabel"></span>
+      <button class="logout-btn" onclick="doLogout()">خروج</button>
+    </div>
+  </div>
+  <div class="main">
+    <div class="tabs" id="tabsBar"></div>
+
+    <!-- ADMIN: DASHBOARD -->
+    <div id="tab-dashboard" style="display:none">
+      <div class="stats-grid" id="statsGrid"></div>
+      <div class="card">
+        <div class="card-title">📋 حالیہ سرگرمی</div>
+        <div id="recentLog"></div>
+      </div>
+    </div>
+
+    <!-- ADMIN: CLASSES -->
+    <div id="tab-classes" style="display:none">
+      <div class="card">
+        <div class="card-title">➕ نئی کلاس / درجہ شامل کریں</div>
+        <div class="form-row">
+          <div class="fg"><label>کیٹیگری</label>
+            <select id="ncCat">
+              <option value="حفظ">حفظ</option>
+              <option value="دینیات">دینیات</option>
+              <option value="عالمیت">عالمیت</option>
+            </select></div>
+          <div class="fg"><label>درجہ کا نام</label><input id="ncName" placeholder="مثلاً: اول، دوم، سال اول" /></div>
+          <div class="fg"><label>استاد کا نام</label><input id="ncTeacher" placeholder="استاد کا نام" /></div>
+        </div>
+        <div class="form-row">
+          <div class="fg"><label>لاگ ان آئی ڈی (درجہ کے لیے)</label><input id="ncId" placeholder="مثلاً: hifz_class1" /></div>
+          <div class="fg"><label>پاس ورڈ</label><input id="ncPass" placeholder="پاس ورڈ" /></div>
+        </div>
+        <button class="btn btn-green" onclick="addClass()">➕ درجہ شامل کریں</button>
+      </div>
+      <div id="classesDisplay"></div>
+    </div>
+
+    <!-- ADMIN: STUDENTS -->
+    <div id="tab-students" style="display:none">
+      <div class="card">
+        <div class="card-title">➕ نیا طالب علم شامل کریں</div>
+        <div class="form-row">
+          <div class="fg"><label>کیٹیگری</label>
+            <select id="sCat" onchange="fillClassDrop('sCls','sCat')">
+              <option value="حفظ">حفظ</option><option value="دینیات">دینیات</option><option value="عالمیت">عالمیت</option>
+            </select></div>
+          <div class="fg"><label>درجہ</label><select id="sCls"></select></div>
+        </div>
+        <div class="form-row">
+          <div class="fg"><label>طالب علم کا نام</label><input id="sName" placeholder="مکمل نام" /></div>
+          <div class="fg"><label>سرپرست کا نام</label><input id="sGuard" placeholder="والد / ولی" /></div>
+          <div class="fg"><label>واٹس ایپ نمبر</label><input id="sPhone" placeholder="923001234567" /></div>
+        </div>
+        <button class="btn btn-green" onclick="addStudent()">➕ شامل کریں</button>
+      </div>
+      <div class="card" style="padding:14px 20px">
+        <div class="form-row" style="margin:0;align-items:flex-end">
+          <div class="fg" style="min-width:120px"><label>کیٹیگری</label>
+            <select id="fCat" onchange="renderStudents()"><option value="">سب</option>
+              <option value="حفظ">حفظ</option><option value="دینیات">دینیات</option><option value="عالمیت">عالمیت</option>
+            </select></div>
+          <div class="fg" style="min-width:120px"><label>درجہ</label>
+            <select id="fCls" onchange="renderStudents()"><option value="">سب</option></select></div>
+          <div class="fg"><label>تلاش</label><input id="fSearch" placeholder="نام تلاش..." oninput="renderStudents()" /></div>
+        </div>
+      </div>
+      <div class="card"><div class="card-title">👨‍🎓 طلبہ</div><div id="studTable"></div></div>
+    </div>
+
+    <!-- ADMIN: ACCOUNTS -->
+    <div id="tab-accounts" style="display:none">
+      <div class="card">
+        <div class="card-title">🔑 اکاؤنٹس</div>
+        <div id="accTable"></div>
+      </div>
+    </div>
+
+    <!-- ADMIN: WHATSAPP -->
+    <div id="tab-whatsapp" style="display:none">
+      <div class="card">
+        <div class="card-title">📱 واٹس ایپ ریمائنڈر</div>
+        <div class="form-row">
+          <div class="fg"><label>کیٹیگری</label>
+            <select id="wCat" onchange="fillClassDrop('wCls','wCat',true)">
+              <option value="">سب</option><option value="حفظ">حفظ</option><option value="دینیات">دینیات</option><option value="عالمیت">عالمیت</option>
+            </select></div>
+          <div class="fg"><label>درجہ</label><select id="wCls"><option value="">سب</option></select></div>
+        </div>
+        <div class="fg" style="margin-bottom:12px"><label>میسج</label>
+          <textarea id="wMsg" rows="5">السلام علیکم!
+آپ کے فرزند {نام} ({درجہ}) کی نمازوں کی ہفتہ وار رپورٹ ملاحظہ فرمائیں۔
+براہ کرم گھر پر نماز کی ترغیب دیتے رہیں۔
+جزاکم اللہ خیرا — دارالعلوم اسلامیہ عربیہ تلوجہ</textarea></div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <button class="btn btn-green" onclick="previewWa()">👁️ پیش نظارہ</button>
+          <button class="btn btn-gold" onclick="exportWaCsv()">📥 CSV ڈاؤنلوڈ</button>
+        </div>
+      </div>
+      <div class="card" id="waPreview" style="display:none">
+        <div class="card-title">📤 پیش نظارہ</div>
+        <div id="waList"></div>
+      </div>
+    </div>
+
+    <!-- TEACHER: NAMAZ ATTENDANCE -->
+    <div id="tab-attendance" style="display:none">
+      <div class="card">
+        <div class="card-title">📅 حاضری درج کریں</div>
+        <div class="form-row">
+          <div class="fg"><label>طالب علم</label><select id="attStu" onchange="loadAttendance()"><option value="">— طالب علم منتخب کریں —</option></select></div>
+          <div class="fg"><label>مہینہ</label><select id="attMonth" onchange="loadAttendance()"></select></div>
+          <div class="fg"><label>سال</label><select id="attYear" onchange="loadAttendance()"></select></div>
+        </div>
+      </div>
+      <div id="attChart"></div>
+    </div>
+
+    <!-- TEACHER: MY STUDENTS -->
+    <div id="tab-mystudents" style="display:none">
+      <div class="card"><div class="card-title">👨‍🎓 میرے درجہ کے طلبہ</div><div id="myStudTable"></div></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="ov" id="ov"><div class="modal" id="modalBox">
+  <div class="modal-title" id="mTitle"></div>
+  <div id="mBody"></div>
+  <div class="modal-footer"><button class="btn btn-red btn-sm" onclick="closeModal()">بند کریں</button></div>
+</div></div>
+
+<div class="toast" id="toast"></div>
+
+<!-- Firebase SDK -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, doc, getDoc, setDoc, onSnapshot, collection, getDocs }
+  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+// ======= FIREBASE CONFIG =======
+const firebaseConfig = {
+  apiKey: "AIzaSyACb1-QPGeaIETVb2O_e60fLqrnd9S2eKs",
+  authDomain: "darululoom-taloja.firebaseapp.com",
+  projectId: "darululoom-taloja",
+  storageBucket: "darululoom-taloja.firebasestorage.app",
+  messagingSenderId: "768514834771",
+  appId: "1:768514834771:web:f92277e297c145fc07e1a6",
+  measurementId: "G-K4833H7MHG"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+// ======= DEFAULT DATA =======
+const DEFAULT_DB = {
+  accounts:[
+    {id:'admin',pass:'Admin@123',name:'ایڈمن',role:'admin',classId:''},
+    {id:'info@darululoomtaloja.com',pass:'Waba@1234',name:'آفیشل اکاؤنٹ',role:'admin',classId:''}
+  ],
+  classes:[],
+  students:[],
+  attendance:{},
+  log:[]
+};
+
+// ======= STATE =======
+let DB = JSON.parse(JSON.stringify(DEFAULT_DB));
+let CU = null;
+let isSyncing = false;
+
+// ======= FIREBASE FUNCTIONS =======
+async function loadFromFirebase() {
+  try {
+    const docRef = doc(db, 'darululoom', 'main');
+    const snap = await getDoc(docRef);
+    if (snap.exists()) {
+      DB = snap.data();
+      // ensure attendance exists
+      if (!DB.attendance) DB.attendance = {};
+    } else {
+      // first time: save defaults to Firebase
+      await setDoc(docRef, DEFAULT_DB);
+    }
+  } catch(e) {
+    console.error('Firebase load error:', e);
+    // fallback to localStorage
+    const local = localStorage.getItem('du_db2');
+    if (local) DB = JSON.parse(local);
+    toast('آف لائن موڈ — مقامی ڈیٹا استعمال ہو رہا ہے', 'red');
+  }
+}
+
+async function saveToFirebase() {
+  setSyncDot('syncing');
+  try {
+    const docRef = doc(db, 'darululoom', 'main');
+    await setDoc(docRef, DB);
+    localStorage.setItem('du_db2', JSON.stringify(DB)); // backup
+    setSyncDot('online');
+  } catch(e) {
+    console.error('Firebase save error:', e);
+    localStorage.setItem('du_db2', JSON.stringify(DB));
+    setSyncDot('offline');
+    toast('محفوظ نہیں ہوا — انٹرنیٹ چیک کریں', 'red');
+  }
+}
+
+// Real-time listener
+function startRealtime() {
+  const docRef = doc(db, 'darululoom', 'main');
+  onSnapshot(docRef, (snap) => {
+    if (snap.exists() && CU) {
+      const newDB = snap.data();
+      if (!newDB.attendance) newDB.attendance = {};
+      DB = newDB;
+      setSyncDot('online');
+      // refresh current view
+      const activeTab = document.querySelector('.tab-btn.active');
+      if (activeTab) activeTab.click();
+    }
+  }, (err) => {
+    setSyncDot('offline');
+  });
+}
+
+function setSyncDot(status) {
+  ['syncDot','appSyncDot'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.className = 'sync-dot ' + status;
+  });
+}
+
+// ======= SAVE =======
+async function save() {
+  localStorage.setItem('du_db2', JSON.stringify(DB));
+  await saveToFirebase();
+}
+
+function logActivity(msg) {
+  if (!DB.log) DB.log = [];
+  DB.log.push({t: new Date().toLocaleString('ur-PK'), m: msg});
+  if (DB.log.length > 60) DB.log = DB.log.slice(-60);
+}
+
+function toast(m, c='green') {
+  const t = document.getElementById('toast');
+  t.textContent = m;
+  t.style.background = c==='red' ? '#b52a2a' : '#1a5c2e';
+  t.style.display = 'block';
+  clearTimeout(t._t);
+  t._t = setTimeout(() => t.style.display='none', 2800);
+}
+
+// ======= LOGIN =======
+window.doLogin = function() {
+  const id = document.getElementById('lid').value.trim();
+  const pass = document.getElementById('lpass').value;
+  const acc = DB.accounts.find(a => a.id===id && a.pass===pass);
+  if (!acc) { document.getElementById('lerr').style.display='block'; return; }
+  CU = acc;
+  document.getElementById('loginPage').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  document.getElementById('uLabel').textContent = acc.name + ' (' + roleLabel(acc.role) + ')';
+  document.getElementById('lerr').style.display = 'none';
+  startRealtime();
+  buildTabs();
+};
+
+window.doLogout = function() {
+  CU = null;
+  document.getElementById('loginPage').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('lid').value = '';
+  document.getElementById('lpass').value = '';
+};
+
+function roleLabel(r) {
+  return {admin:'ایڈمن', teacher:'استاد / درجہ انچارج'}[r] || r;
+}
+
+// ======= TABS =======
+function buildTabs() {
+  const bar = document.getElementById('tabsBar');
+  let tabs = [];
+  if (CU.role === 'admin') {
+    tabs = [
+      {id:'dashboard', label:'📊 ڈیش بورڈ'},
+      {id:'classes', label:'🏫 درجات'},
+      {id:'students', label:'👨‍🎓 طلبہ'},
+      {id:'accounts', label:'🔑 اکاؤنٹس'},
+      {id:'whatsapp', label:'📱 واٹس ایپ'},
+    ];
+  } else {
+    tabs = [
+      {id:'mystudents', label:'👨‍🎓 میرے طلبہ'},
+      {id:'attendance', label:'🕌 نماز حاضری'},
+    ];
+  }
+  bar.innerHTML = tabs.map((t,i) =>
+    `<button class="tab-btn${i===0?' active':''}" onclick="showTab('${t.id}',this)">${t.label}</button>`
+  ).join('');
+  showTab(tabs[0].id, bar.firstChild);
+}
+
+window.showTab = function(name, btn) {
+  document.querySelectorAll('[id^="tab-"]').forEach(el => el.style.display='none');
+  const el = document.getElementById('tab-'+name);
+  if (el) el.style.display = 'block';
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  if (name==='dashboard') renderDashboard();
+  if (name==='classes') renderClasses();
+  if (name==='students') { fillClassDrop('sCls','sCat'); renderStudents(); }
+  if (name==='accounts') renderAccounts();
+  if (name==='attendance') initAttendance();
+  if (name==='mystudents') renderMyStudents();
+};
+
+// ======= DASHBOARD =======
+function renderDashboard() {
+  const cats = ['حفظ','دینیات','عالمیت'];
+  let h = `<div class="stat-box"><div class="stat-num">${DB.students.length}</div><div class="stat-label">کل طلبہ</div></div>`;
+  h += `<div class="stat-box"><div class="stat-num">${DB.classes.length}</div><div class="stat-label">کل درجات</div></div>`;
+  cats.forEach(c => {
+    const n = DB.students.filter(s => s.cat===c).length;
+    h += `<div class="stat-box"><div class="stat-num">${n}</div><div class="stat-label">${c}</div></div>`;
+  });
+  document.getElementById('statsGrid').innerHTML = h;
+  const recent = (DB.log||[]).slice(-8).reverse();
+  document.getElementById('recentLog').innerHTML = recent.length
+    ? `<table><thead><tr><th>وقت</th><th>سرگرمی</th></tr></thead><tbody>${recent.map(l=>`<tr><td style="white-space:nowrap">${l.t}</td><td>${l.m}</td></tr>`).join('')}</tbody></table>`
+    : '<div class="empty">ابھی کوئی سرگرمی نہیں</div>';
+}
+
+// ======= CLASSES =======
+window.addClass = async function() {
+  const cat = document.getElementById('ncCat').value;
+  const name = document.getElementById('ncName').value.trim();
+  const teacher = document.getElementById('ncTeacher').value.trim();
+  const cid = document.getElementById('ncId').value.trim();
+  const cpass = document.getElementById('ncPass').value.trim();
+  if (!name) { toast('درجہ کا نام درج کریں','red'); return; }
+  if (!cid||!cpass) { toast('آئی ڈی اور پاس ورڈ درج کریں','red'); return; }
+  if (DB.classes.find(c => c.cat===cat && c.name===name)) { toast('یہ درجہ پہلے سے موجود ہے','red'); return; }
+  if (DB.accounts.find(a => a.id===cid)) { toast('یہ آئی ڈی پہلے سے موجود ہے','red'); return; }
+  const id = 'cls_'+Date.now();
+  DB.classes.push({id, cat, name, teacher});
+  DB.accounts.push({id:cid, pass:cpass, name:teacher||name, role:'teacher', classId:id});
+  logActivity(`نیا درجہ: ${cat} — ${name} (استاد: ${teacher})`);
+  await save();
+  ['ncName','ncTeacher','ncId','ncPass'].forEach(x => document.getElementById(x).value='');
+  renderClasses();
+  toast('درجہ شامل ہو گیا ✅');
+};
+
+window.deleteClass = async function(id) {
+  if (!confirm('کیا آپ یہ درجہ اور اس کے تمام طلبہ حذف کرنا چاہتے ہیں؟')) return;
+  const cls = DB.classes.find(c => c.id===id);
+  DB.classes = DB.classes.filter(c => c.id!==id);
+  DB.students = DB.students.filter(s => s.classId!==id);
+  DB.accounts = DB.accounts.filter(a => a.classId!==id);
+  logActivity(`درجہ حذف: ${cls?.name}`);
+  await save();
+  renderClasses();
+  toast('درجہ حذف ہو گیا');
+};
+
+function renderClasses() {
+  const cats = ['حفظ','دینیات','عالمیت'];
+  let h = '';
+  cats.forEach(cat => {
+    const cls = DB.classes.filter(c => c.cat===cat);
+    h += `<div class="section-head">📚 ${cat} — (${cls.length} درجات)</div>`;
+    if (!cls.length) { h += `<div class="empty" style="padding:14px">ابھی کوئی درجہ نہیں</div>`; }
+    else {
+      h += `<div class="class-grid">` + cls.map(c => {
+        const acc = DB.accounts.find(a => a.classId===c.id);
+        const cnt = DB.students.filter(s => s.classId===c.id).length;
+        return `<div class="class-card">
+          <button class="cc-del" onclick="deleteClass('${c.id}')">✕</button>
+          <div class="cc-name">${c.name}</div>
+          <div class="cc-info">استاد: ${c.teacher||'—'}</div>
+          <div class="cc-info">طلبہ: ${cnt}</div>
+          <div class="cc-info" style="margin-top:6px;background:#f0f8f0;padding:4px 6px;border-radius:5px;font-size:11px">
+            آئی ڈی: <b>${acc?.id||'—'}</b></div>
+        </div>`;
+      }).join('') + '</div>';
+    }
+  });
+  document.getElementById('classesDisplay').innerHTML = h;
+}
+
+// ======= STUDENTS =======
+window.fillClassDrop = function(selId, catId, addAll=false) {
+  const cat = document.getElementById(catId)?.value || '';
+  const sel = document.getElementById(selId); if (!sel) return;
+  const cls = cat ? DB.classes.filter(c => c.cat===cat) : DB.classes;
+  sel.innerHTML = (addAll ? '<option value="">سب</option>' : '') +
+    (cls.length ? cls.map(c => `<option value="${c.id}">${c.cat} — ${c.name}</option>`).join('') : '<option value="">— پہلے درجہ بنائیں —</option>');
+};
+
+window.addStudent = async function() {
+  const cat = document.getElementById('sCat').value;
+  const classId = document.getElementById('sCls').value;
+  const name = document.getElementById('sName').value.trim();
+  const guard = document.getElementById('sGuard').value.trim();
+  const phone = document.getElementById('sPhone').value.trim();
+  if (!name) { toast('نام درج کریں','red'); return; }
+  if (!classId) { toast('پہلے درجہ بنائیں','red'); return; }
+  const cls = DB.classes.find(c => c.id===classId);
+  DB.students.push({id:'s'+Date.now(), cat, classId, className:cls?.name, name, guard, phone});
+  logActivity(`نیا طالب علم: ${name} (${cat}—${cls?.name})`);
+  await save();
+  ['sName','sGuard','sPhone'].forEach(x => document.getElementById(x).value='');
+  renderStudents();
+  toast('طالب علم شامل ہو گیا ✅');
+};
+
+window.deleteStudent = async function(id) {
+  if (!confirm('حذف کریں؟')) return;
+  DB.students = DB.students.filter(s => s.id!==id);
+  await save();
+  renderStudents();
+  toast('حذف ہو گیا');
+};
+
+function renderStudents() {
+  const cat = document.getElementById('fCat')?.value || '';
+  const classId = document.getElementById('fCls')?.value || '';
+  const search = (document.getElementById('fSearch')?.value || '').toLowerCase();
+  const fc = document.getElementById('fCls');
+  if (fc) {
+    const prev = fc.value;
+    const cls = cat ? DB.classes.filter(c => c.cat===cat) : DB.classes;
+    fc.innerHTML = '<option value="">سب</option>' + cls.map(c => `<option value="${c.id}" ${c.id===prev?'selected':''}>${c.cat}—${c.name}</option>`).join('');
+  }
+  let stus = DB.students;
+  if (cat) stus = stus.filter(s => s.cat===cat);
+  if (classId) stus = stus.filter(s => s.classId===classId);
+  if (search) stus = stus.filter(s => s.name.includes(search) || s.guard.includes(search));
+  const cc = {حفظ:'bg', دینیات:'bb', عالمیت:'br'};
+  document.getElementById('studTable').innerHTML = stus.length
+    ? `<table><thead><tr><th>#</th><th>نام</th><th>سرپرست</th><th>واٹس ایپ</th><th>کیٹیگری</th><th>درجہ</th><th>عمل</th></tr></thead>
+      <tbody>${stus.map((s,i) => `<tr><td>${i+1}</td><td>${s.name}</td><td>${s.guard||'—'}</td><td>${s.phone||'—'}</td>
+      <td><span class="badge ${cc[s.cat]||'bo'}">${s.cat}</span></td><td>${s.className||'—'}</td>
+      <td><button class="btn btn-red btn-xs" onclick="deleteStudent('${s.id}')">حذف</button></td></tr>`).join('')}</tbody></table>`
+    : '<div class="empty">کوئی طالب علم نہیں ملا</div>';
+}
+
+// ======= ACCOUNTS =======
+window.deleteAccount = async function(id) {
+  if (id==='admin' || id===CU?.id) { toast('یہ اکاؤنٹ حذف نہیں ہو سکتا','red'); return; }
+  if (!confirm('حذف کریں؟')) return;
+  DB.accounts = DB.accounts.filter(a => a.id!==id);
+  await save();
+  renderAccounts();
+  toast('اکاؤنٹ حذف ہو گیا');
+};
+
+function renderAccounts() {
+  const rc = {admin:'br', teacher:'bb'};
+  document.getElementById('accTable').innerHTML = `<table>
+    <thead><tr><th>#</th><th>نام</th><th>آئی ڈی</th><th>پاس ورڈ</th><th>کردار</th><th>درجہ</th><th>عمل</th></tr></thead>
+    <tbody>${DB.accounts.map((a,i) => {
+      const cls = DB.classes.find(c => c.id===a.classId);
+      return `<tr><td>${i+1}</td><td>${a.name}</td>
+      <td style="font-family:monospace;direction:ltr;text-align:left;font-size:12px">${a.id}</td>
+      <td style="font-family:monospace;font-size:12px">${a.pass}</td>
+      <td><span class="badge ${rc[a.role]||'bg'}">${roleLabel(a.role)}</span></td>
+      <td>${cls ? cls.cat+'—'+cls.name : 'سب'}</td>
+      <td>${a.id!=='admin' ? `<button class="btn btn-red btn-xs" onclick="deleteAccount('${a.id}')">حذف</button>` : '—'}</td></tr>`;
+    }).join('')}</tbody></table>`;
+}
+
+// ======= WHATSAPP =======
+window.previewWa = function() {
+  const cat = document.getElementById('wCat').value;
+  const cid = document.getElementById('wCls').value;
+  const tpl = document.getElementById('wMsg').value;
+  let stus = DB.students.filter(s => s.phone);
+  if (cat) stus = stus.filter(s => s.cat===cat);
+  if (cid) stus = stus.filter(s => s.classId===cid);
+  if (!stus.length) { toast('نمبر والے طلبہ نہیں ملے','red'); return; }
+  const prev = document.getElementById('waPreview');
+  prev.style.display = 'block'; prev._s = stus; prev._t = tpl;
+  const show = stus.slice(0,3);
+  document.getElementById('waList').innerHTML =
+    `<div style="font-weight:700;color:var(--green);margin-bottom:10px">کل ${stus.length} سرپرستوں کو میسج جائے گا</div>` +
+    show.map(s => {
+      const m = tpl.replace(/{نام}/g,s.name).replace(/{درجہ}/g,s.className||s.cat);
+      return `<div style="margin-bottom:10px"><div style="font-size:11px;color:#888">→ ${s.guard||s.name} (${s.phone})</div><div class="wa-tpl">${m}</div></div>`;
+    }).join('') +
+    (stus.length>3 ? `<div style="color:#888;font-size:12px">... اور ${stus.length-3} مزید</div>` : '') +
+    `<div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap">
+      <button class="wa-btn" onclick="sendWa()">📤 wa.me سے بھیجیں</button>
+      <button class="btn btn-gold" onclick="exportWaCsv()">📥 CSV ڈاؤنلوڈ</button>
+    </div>`;
+};
+
+window.sendWa = function() {
+  const prev = document.getElementById('waPreview');
+  const stus = prev._s||[]; const tpl = prev._t||'';
+  stus.slice(0,5).forEach(s => {
+    const m = encodeURIComponent(tpl.replace(/{نام}/g,s.name).replace(/{درجہ}/g,s.className||s.cat));
+    window.open(`https://wa.me/${s.phone.replace(/\D/g,'')}?text=${m}`, '_blank');
+  });
+  toast(`${stus.length} میسج تیار ✅`);
+};
+
+window.exportWaCsv = function() {
+  const prev = document.getElementById('waPreview');
+  const stus = prev._s || DB.students.filter(s => s.phone);
+  const tpl = prev._t || document.getElementById('wMsg').value;
+  const rows = [['نام','سرپرست','فون','کیٹیگری','درجہ','میسج']];
+  stus.forEach(s => rows.push([s.name,s.guard,s.phone,s.cat,s.className,
+    tpl.replace(/{نام}/g,s.name).replace(/{درجہ}/g,s.className||s.cat)]));
+  const csv = '\uFEFF' + rows.map(r => r.map(v => `"${(v||'').replace(/"/g,'""')}"`).join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+  a.download = 'wa_reminders.csv'; a.click(); toast('CSV تیار ہے');
+};
+
+// ======= NAMAZ ATTENDANCE =======
+const NAMAZ_ROWS = [
+  {key:'tahajjud',label:'تہجد',group:''},
+  {key:'fajr_sunnat',label:'سنت',group:'فجر'},
+  {key:'fajr_farz',label:'فرض باجماعت',group:'فجر'},
+  {key:'ishraq',label:'اشراق',group:''},
+  {key:'chasht',label:'چاشت',group:''},
+  {key:'zuhr_qabli',label:'قبلیہ سنت',group:'ظہر'},
+  {key:'zuhr_farz',label:'فرض باجماعت',group:'ظہر'},
+  {key:'zuhr_badi',label:'بعدیہ سنت',group:'ظہر'},
+  {key:'asr_sunnat',label:'سنت',group:'عصر'},
+  {key:'asr_farz',label:'فرض باجماعت',group:'عصر'},
+  {key:'maghrib_qabli',label:'قبلیہ سنت',group:'مغرب'},
+  {key:'maghrib_farz',label:'فرض باجماعت',group:'مغرب'},
+  {key:'maghrib_badi',label:'بعدیہ سنت',group:'مغرب'},
+  {key:'awabeen',label:'اوابین',group:''},
+  {key:'isha_qabli',label:'قبلیہ سنت',group:'عشاء'},
+  {key:'isha_farz',label:'فرض باجماعت',group:'عشاء'},
+  {key:'isha_badi',label:'بعدیہ سنت',group:'عشاء'},
+  {key:'witr',label:'وتر',group:''},
+];
+
+const MONTHS = ['محرم','صفر','ربیع الاول','ربیع الثانی','جمادی الاول','جمادی الثانی','رجب','شعبان','رمضان','شوال','ذیقعدہ','ذیالحجہ',
+  'جنوری','فروری','مارچ','اپریل','مئی','جون','جولائی','اگست','ستمبر','اکتوبر','نومبر','دسمبر'];
+
+function initAttendance() {
+  const myClass = CU.classId;
+  const stus = myClass ? DB.students.filter(s => s.classId===myClass) : DB.students;
+  const sel = document.getElementById('attStu');
+  sel.innerHTML = '<option value="">— طالب علم منتخب کریں —</option>' +
+    stus.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+  const mSel = document.getElementById('attMonth');
+  mSel.innerHTML = MONTHS.map((m,i) => `<option value="${i}">${m}</option>`).join('');
+  const now = new Date();
+  mSel.value = now.getMonth()+12;
+  const ySel = document.getElementById('attYear');
+  const yr = now.getFullYear();
+  ySel.innerHTML = [yr-1,yr,yr+1].map(y => `<option value="${y}"${y===yr?' selected':''}>${y}</option>`).join('');
+  document.getElementById('attChart').innerHTML = '';
+}
+
+window.loadAttendance = function() {
+  const stuId = document.getElementById('attStu').value;
+  if (!stuId) { document.getElementById('attChart').innerHTML=''; return; }
+  const stu = DB.students.find(s => s.id===stuId);
+  if (!stu) return;
+  const month = document.getElementById('attMonth').value;
+  const year = document.getElementById('attYear').value;
+  const key = `${stuId}_${year}_${month}`;
+  if (!DB.attendance) DB.attendance = {};
+  const att = DB.attendance[key] || {};
+  const days = Array.from({length:31},(_,i) => i+1);
+  let th1 = `<th style="min-width:120px">نماز</th>` + days.map(d => `<th>${d}</th>`).join('');
+  let rows = '';
+  let lastGroup = '';
+  NAMAZ_ROWS.forEach(row => {
+    if (row.group && row.group!==lastGroup) {
+      rows += `<tr><td class="group-header" colspan="${days.length+1}">${row.group}</td></tr>`;
+      lastGroup = row.group;
+    } else if (!row.group) { lastGroup=''; }
+    let cells = days.map(d => {
+      const val = att[row.key] ? att[row.key][d] : undefined;
+      const sym = val===true ? '✅' : val===false ? '❌' : '◯';
+      const cls = val===true ? 'c-yes' : val===false ? 'c-no' : 'c-empty';
+      return `<td><span class="check-cell ${cls}" onclick="toggleAtt('${key}','${row.key}',${d})">${sym}</span></td>`;
+    }).join('');
+    rows += `<tr><td class="${row.group?'sub-label':'row-label'}">${row.label}</td>${cells}</tr>`;
+  });
+  document.getElementById('attChart').innerHTML = `
+    <div class="namaz-header">نماز حاضری چارٹ — ${stu.name} — ${MONTHS[month]} ${year}</div>
+    <div class="namaz-subheader">
+      <span>درجہ: <b>${stu.className||stu.cat}</b></span>
+      <span>✅ = پڑھی &nbsp; ❌ = نہیں پڑھی &nbsp; ◯ = درج نہیں</span>
+      <span style="margin-right:auto"><button class="btn btn-green btn-sm" onclick="saveAtt('${key}')">💾 محفوظ کریں</button></span>
+    </div>
+    <div class="namaz-wrap"><table class="namaz-table">
+      <thead><tr>${th1}</tr></thead>
+      <tbody>${rows}</tbody>
+    </table></div>
+    <div style="margin-top:10px;font-size:12px;color:#888;padding:0 4px">دستخط استاذ: ............................&nbsp;&nbsp;&nbsp; دستخط سرپرست: ............................</div>`;
+};
+
+window.toggleAtt = async function(key, rowKey, day) {
+  if (!DB.attendance) DB.attendance = {};
+  if (!DB.attendance[key]) DB.attendance[key] = {};
+  if (!DB.attendance[key][rowKey]) DB.attendance[key][rowKey] = {};
+  const cur = DB.attendance[key][rowKey][day];
+  DB.attendance[key][rowKey][day] = cur===undefined ? true : cur===true ? false : undefined;
+  if (DB.attendance[key][rowKey][day]===undefined) delete DB.attendance[key][rowKey][day];
+  await save();
+  loadAttendance();
+};
+
+window.saveAtt = async function(key) {
+  await save();
+  logActivity(`حاضری محفوظ: ${key}`);
+  toast('حاضری محفوظ ہو گئی ✅');
+};
+
+// ======= TEACHER: MY STUDENTS =======
+function renderMyStudents() {
+  const stus = CU.classId ? DB.students.filter(s => s.classId===CU.classId) : [];
+  const cls = DB.classes.find(c => c.id===CU.classId);
+  document.getElementById('myStudTable').innerHTML = stus.length
+    ? `<div style="margin-bottom:10px;font-size:13px;color:#555">درجہ: <b>${cls ? cls.cat+' — '+cls.name : '—'}</b> | کل طلبہ: <b>${stus.length}</b></div>` +
+      `<table><thead><tr><th>#</th><th>نام</th><th>سرپرست</th><th>واٹس ایپ</th><th>حاضری دیکھیں</th></tr></thead>
+      <tbody>${stus.map((s,i) => `<tr><td>${i+1}</td><td>${s.name}</td><td>${s.guard||'—'}</td><td>${s.phone||'—'}</td>
+      <td><button class="btn btn-green btn-xs" onclick="goToAtt('${s.id}')">📅 حاضری</button></td></tr>`).join('')}</tbody></table>`
+    : '<div class="empty">ابھی کوئی طالب علم نہیں</div>';
+}
+
+window.goToAtt = function(stuId) {
+  showTab('attendance', null);
+  setTimeout(() => {
+    document.getElementById('attStu').value = stuId;
+    loadAttendance();
+    document.querySelectorAll('.tab-btn').forEach(b => {
+      b.classList.toggle('active', b.textContent.includes('نماز'));
+    });
+  }, 100);
+};
+
+window.closeModal = function() {
+  document.getElementById('ov').classList.remove('open');
+};
+
+// ======= INIT =======
+async function init() {
+  await loadFromFirebase();
+  document.getElementById('loadingPage').style.display = 'none';
+  document.getElementById('loginPage').style.display = 'flex';
+}
+
+init();
+
+// PWA Service Worker
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+</script>
+</body>
+</html>
