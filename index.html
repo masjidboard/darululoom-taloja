@@ -830,8 +830,10 @@ window.loadAttendance=function(){
   let th=`<th style="min-width:110px">${LANG==='ur'?'نماز':'Prayer'}</th>`+days.map(d=>`<th>${d}</th>`).join('');
   let rows='';let lastGroup='';
   NAMAZ.forEach(row=>{
-    if(row.group&&row.group!==lastGroup){rows+=`<tr><td class="group-header" colspan="${days.length+1}">${row.group}</td></tr>`;lastGroup=row.group;}
-    else if(!row.group){lastGroup='';}
+    if(row.group&&row.group!==lastGroup){
+      rows+=`<tr><td class="group-header" colspan="${days.length+1}" style="background:var(--green);color:white;font-size:12px;padding:5px 10px;font-weight:700;">🕌 ${row.group}</td></tr>`;
+      lastGroup=row.group;
+    } else if(!row.group){lastGroup='';}
     let cells=days.map(d=>{const val=att[row.key]?att[row.key][d]:undefined;
       const sym=val===true?'✅':val===false?'❌':'◯';const cls=val===true?'c-yes':val===false?'c-no':'c-empty';
       return`<td><span class="check-cell ${cls}" onclick="toggleAtt('${key}','${row.key}',${d})">${sym}</span></td>`;}).join('');
@@ -849,9 +851,16 @@ window.loadAttendance=function(){
 window.toggleAtt=async function(key,rowKey,day){
   if(!DB.attendance)DB.attendance={};if(!DB.attendance[key])DB.attendance[key]={};if(!DB.attendance[key][rowKey])DB.attendance[key][rowKey]={};
   const cur=DB.attendance[key][rowKey][day];
-  DB.attendance[key][rowKey][day]=cur===undefined?true:cur===true?false:undefined;
-  if(DB.attendance[key][rowKey][day]===undefined)delete DB.attendance[key][rowKey][day];
-  await save();loadAttendance();
+  const next=cur===undefined?true:cur===true?false:undefined;
+  if(next===undefined){delete DB.attendance[key][rowKey][day];}
+  else{DB.attendance[key][rowKey][day]=next;}
+  // update just the clicked cell without reloading entire chart
+  const sym=next===true?'✅':next===false?'❌':'◯';
+  const cls=next===true?'c-yes':next===false?'c-no':'c-empty';
+  const span=document.querySelector(`[onclick="toggleAtt('${key}','${rowKey}',${day})"]`);
+  if(span){span.textContent=sym;span.className='check-cell '+cls;}
+  // save in background
+  save();
 };
 
 window.saveAtt=async function(key){await save();logAct('Attendance saved: '+key);toast(t('savedToast'));};
