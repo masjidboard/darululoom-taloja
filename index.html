@@ -498,11 +498,19 @@ function t(key,...args){
 function setSyncDot(s){['syncDot','appSyncDot'].forEach(id=>{const el=document.getElementById(id);if(el)el.className='sync-dot '+s;});}
 
 async function loadFromFirebase(){
-  try{const snap=await getDoc(doc(db,'darululoom','main'));
+  try{
+    const snap=await Promise.race([
+      getDoc(doc(db,'darululoom','main')),
+      new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),8000))
+    ]);
     if(snap.exists()){DB=snap.data();if(!DB.attendance)DB.attendance={};}
     else{await setDoc(doc(db,'darululoom','main'),DEFAULT_DB);}
     setSyncDot('online');
-  }catch(e){const local=localStorage.getItem('du_db4');if(local)DB=JSON.parse(local);setSyncDot('offline');}
+  }catch(e){
+    const local=localStorage.getItem('du_db4');
+    if(local)DB=JSON.parse(local);
+    setSyncDot('offline');
+  }
 }
 
 async function saveToFirebase(){
@@ -1437,26 +1445,16 @@ window.renderStudentView=function(){
     totJ+=j;totA+=a;totM+=m;
     sumHtml+=`<div style="display:flex;justify-content:space-between;padding:5px 10px;border-bottom:1px solid var(--border);font-size:12px"><span>${g}</span><span>✅${j} 🟡${a} ❌${m}</span></div>`;
   });
-  document.getElementById('studentViewChart').innerHTML=`
-    <div style="background:var(--green);color:white;padding:10px;border-radius:8px 8px 0 0;font-size:13px;font-weight:700;text-align:center">
-      ${stu.name} — ${MONTHS[month]} ${year}
-    </div>
-    <div style="font-size:10px;padding:5px 10px;background:var(--gp);border-bottom:1px solid var(--border)">
-      ✅=${LANG==='ur'?'باجماعت':'Jamaat'} 🟡=${LANG==='ur'?'اکیلے':'Alone'} ❌=${LANG==='ur'?'نہیں':'No'} ◯=${LANG==='ur'?'درج نہیں':'Blank'}
-    </div>
-    <div style="overflow-x:auto;border:1px solid var(--border);margin-bottom:12px">
-      <table style="border-collapse:collapse;font-size:11px;min-width:700px">
-        <thead><tr style="background:var(--green);color:white">${th}</tr></thead>
-        <tbody>${rows}</tbody>
-      </table>
-    </div>
-    ${sumHtml?`<div class="card" style="margin-top:0">
-      <div class="card-title">${LANG==='ur'?'📊 فرض نمازوں کا خلاصہ':'📊 Farz Summary'}</div>
-      ${sumHtml}
-      <div style="display:flex;justify-content:space-between;padding:7px 10px;font-weight:700;font-size:13px;color:var(--green)">
-        <span>${LANG==='ur'?'مجموعی':'Total'}</span><span>✅${totJ} 🟡${totA} ❌${totM}</span>
-      </div>
-    </div>`:''}`;
+  const sumCard = sumHtml ? '<div class="card" style="margin-top:0"><div class="card-title">'+(LANG==='ur'?'📊 فرض نمازوں کا خلاصہ':'📊 Farz Summary')+'</div>'+sumHtml+'<div style="display:flex;justify-content:space-between;padding:7px 10px;font-weight:700;font-size:13px;color:#1a5c2e"><span>'+(LANG==='ur'?'مجموعی':'Total')+'</span><span>✅'+totJ+' 🟡'+totA+' ❌'+totM+'</span></div></div>' : '';
+  const legend = '✅='+(LANG==='ur'?'باجماعت':'Jamaat')+' 🟡='+(LANG==='ur'?'اکیلے':'Alone')+' ❌='+(LANG==='ur'?'نہیں':'No')+' ◯='+(LANG==='ur'?'درج نہیں':'Blank');
+  document.getElementById('studentViewChart').innerHTML=
+    '<div style="background:#1a5c2e;color:white;padding:10px;border-radius:8px 8px 0 0;font-size:13px;font-weight:700;text-align:center">'+
+    stu.name+' — '+MONTHS[month]+' '+year+'</div>'+
+    '<div style="font-size:10px;padding:5px 10px;background:#e8f5ec;border-bottom:1px solid #c5ddc9">'+legend+'</div>'+
+    '<div style="overflow-x:auto;border:1px solid #c5ddc9;margin-bottom:12px">'+
+    '<table style="border-collapse:collapse;font-size:11px;min-width:700px">'+
+    '<thead><tr style="background:#1a5c2e;color:white">'+th+'</tr></thead>'+
+    '<tbody>'+rows+'</tbody></table></div>'+sumCard;
 };
 
 window.closeModal=function(){document.getElementById('ov').classList.remove('open');};
