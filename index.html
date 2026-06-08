@@ -310,6 +310,18 @@ tbody td{padding:7px 10px;vertical-align:middle;}
   </div>
 </div>
 
+    <!-- STUDENT VIEW -->
+    <div id="tab-studentview" style="display:none">
+      <div class="card">
+        <div class="card-title">📋 <span id="svStudentName"></span></div>
+        <div class="form-row">
+          <div class="fg"><label>مہینہ / Month</label><select id="svMonth" onchange="renderStudentView()"></select></div>
+          <div class="fg"><label>سال / Year</label><select id="svYear" onchange="renderStudentView()"></select></div>
+        </div>
+      </div>
+      <div id="studentViewChart"></div>
+    </div>
+
 <div class="ov" id="ov"><div class="modal" id="modalBox">
   <div style="font-size:15px;font-weight:700;color:var(--green);margin-bottom:14px" id="mTitle"></div>
   <div id="mBody"></div>
@@ -340,7 +352,7 @@ const T = {
     appTitle:'🕌 دارالعلوم تلوجہ', loadText:'دارالعلوم تلوجہ', loadSub:'لوڈ ہو رہا ہے...',
     loginBtn:'داخل ہوں ←', loginErr:'آئی ڈی یا پاس ورڈ غلط ہے', syncTxt:'Firebase منسلک',
     logout:'خروج', admin:'ایڈمن', teacher:'استاد',
-    tabDash:'📊 ڈیش بورڈ', tabCls:'🏫 درجات', tabStu:'👨‍🎓 طلبہ', tabAcc:'🔑 اکاؤنٹس', tabWA:'📱 واٹس ایپ',
+    tabStuView:'📋 میرا ریکارڈ', tabDash:'📊 ڈیش بورڈ', tabCls:'🏫 درجات', tabStu:'👨‍🎓 طلبہ', tabAcc:'🔑 اکاؤنٹس', tabWA:'📱 واٹس ایپ',
     tabMyS:'👨‍🎓 میرے طلبہ', tabAtt:'🕌 نماز حاضری',
     ttRecent:'📋 حالیہ سرگرمی', ttAddClass:'➕ نئی کلاس', ttAddStu:'➕ نیا طالب علم',
     ttAcc:'🔑 اکاؤنٹس', ttWA:'📱 واٹس ایپ', ttWAPreview:'📤 پیش نظارہ',
@@ -386,7 +398,7 @@ const T = {
     appTitle:'🕌 DU Taloja', loadText:'Darul Uloom Taloja', loadSub:'Loading...',
     loginBtn:'Login →', loginErr:'Invalid ID or Password', syncTxt:'Firebase Connected',
     logout:'Logout', admin:'Admin', teacher:'Teacher',
-    tabDash:'📊 Dashboard', tabCls:'🏫 Classes', tabStu:'👨‍🎓 Students', tabAcc:'🔑 Accounts', tabWA:'📱 WhatsApp',
+    tabStuView:'📋 My Record', tabDash:'📊 Dashboard', tabCls:'🏫 Classes', tabStu:'👨‍🎓 Students', tabAcc:'🔑 Accounts', tabWA:'📱 WhatsApp',
     tabMyS:'👨‍🎓 My Students', tabAtt:'🕌 Prayer Attendance',
     ttRecent:'📋 Recent Activity', ttAddClass:'➕ Add New Class', ttAddStu:'➕ Add New Student',
     ttAcc:'🔑 Accounts', ttWA:'📱 WhatsApp Reminder', ttWAPreview:'📤 Preview',
@@ -524,7 +536,7 @@ window.doLogin=function(){
   CU=acc;
   document.getElementById('loginPage').style.display='none';
   document.getElementById('app').style.display='block';
-  document.getElementById('uLabel').textContent=acc.name+' ('+(acc.role==='admin'?t('admin'):t('teacher'))+')';
+  document.getElementById('uLabel').textContent=acc.name+' ('+(acc.role==='admin'?t('admin'):acc.role==='teacher'?t('teacher'):(LANG==='ur'?'طالب علم':'Student'))+')';
   document.getElementById('lerr').style.display='none';
   startRealtime();buildTabs();applyTranslations();
 };
@@ -535,7 +547,9 @@ function buildTabs(){
   const bar=document.getElementById('tabsBar');
   const tabs=CU.role==='admin'
     ?[{id:'dashboard',k:'tabDash'},{id:'classes',k:'tabCls'},{id:'students',k:'tabStu'},{id:'accounts',k:'tabAcc'},{id:'whatsapp',k:'tabWA'}]
-    :[{id:'mystudents',k:'tabMyS'},{id:'attendance',k:'tabAtt'}];
+    :CU.role==='teacher'
+    ?[{id:'mystudents',k:'tabMyS'},{id:'attendance',k:'tabAtt'}]
+    :[{id:'studentview',k:'tabStuView'}];
   bar.innerHTML=tabs.map((tb,i)=>`<button class="tab-btn${i===0?' active':''}" onclick="showTab('${tb.id}',this)">${t(tb.k)}</button>`).join('');
   showTab(tabs[0].id,bar.firstChild);
 }
@@ -551,6 +565,7 @@ window.showTab=function(name,btn){
   if(name==='accounts')renderAccounts();
   if(name==='attendance')initAttendance();
   if(name==='mystudents')renderMyStudents();
+  if(name==='studentview')initStudentView();
 };
 
 function renderDashboard(){
@@ -682,7 +697,13 @@ window.addStudent=async function(){
   const name=document.getElementById('sName').value.trim(),phone=document.getElementById('sPhone').value.trim();
   if(!name){toast(t('enterName'),'red');return;}if(!classId){toast(t('needClass'),'red');return;}
   const cls=DB.classes.find(c=>c.id===classId);
-  DB.students.push({id:'s'+Date.now(),cat,classId,className:cls?.name,name,phone});
+  // Auto generate student login
+  const stuNum='STU'+Math.floor(1000+Math.random()*9000);
+  const stuPass=name.split(' ')[0].replace(/[^a-zA-Z\u0600-\u06FF]/g,'')+Math.floor(100+Math.random()*900);
+  const newStuId='s'+Date.now();
+  DB.students.push({id:newStuId,cat,classId,className:cls?.name,name,phone,stuId:stuNum,stuPass:stuPass});
+  // Add student account linked to student record
+  DB.accounts.push({id:stuNum,pass:stuPass,name:name,role:'student',studentId:newStuId});
   logAct(`New student: ${name}`);await save();
   ['sName','sPhone'].forEach(x=>document.getElementById(x).value='');
   renderStudents();toast(t('addedToast'));
@@ -707,6 +728,7 @@ function renderStudents(){
     ?`<table><thead><tr><th>#</th><th>${t('thName')}</th><th>${t('thPhone')}</th><th>${t('thCat')}</th><th>${t('thClass')}</th><th>${t('thPDF')}</th><th>${t('thDelete')}</th></tr></thead>
     <tbody>${stus.map((s,i)=>`<tr><td>${i+1}</td><td>${s.name}</td><td>${s.phone||'—'}</td>
     <td><span class="badge ${cc[s.cat]||'bo'}">${s.cat}</span></td><td>${s.className||'—'}</td>
+    <td><div style="font-size:10px;background:var(--gp);padding:2px 5px;border-radius:4px;font-family:monospace">${s.stuId||'—'}</div><div style="font-size:9px;color:var(--subtext)">${s.stuPass||'—'}</div></td>
     <td><button class="btn btn-blue btn-xs" onclick="exportStudentPDF('${s.id}')">📄</button></td>
     <td>${s.phone?`<button class="btn btn-xs" style="background:#25d366;color:white" onclick="openAdminAtt('${s.id}')">📱 WA</button>`:'—'}</td>
     <td><button class="btn btn-xs" style="background:#1a3e6b;color:white" onclick="openAdminAtt('${s.id}')">📅 چارٹ</button></td>
@@ -949,7 +971,7 @@ function renderMyStudents(){
   const cls=DB.classes.find(c=>c.id===CU.classId);
   document.getElementById('myStudTable').innerHTML=stus.length
     ?`<div style="margin-bottom:8px;font-size:13px;color:var(--subtext)">${LANG==='ur'?'درجہ':'Class'}: <b>${cls?cls.cat+'—'+cls.name:'—'}</b> | ${LANG==='ur'?'کل':'Total'}: <b>${stus.length}</b></div>`+
-      `<table><thead><tr><th>#</th><th>${t('thName')}</th><th>${t('thPhone')}</th><th>${LANG==='ur'?'حاضری':'Attendance'}</th><th>${t('thPDF')}</th><th>WA</th><th>📅</th><th>✏️</th><th>${t('thDelete')}</th></tr></thead>
+      `<table><thead><tr><th>#</th><th>${t('thName')}</th><th>${t('thPhone')}</th><th>${LANG==='ur'?'حاضری':'Attendance'}</th><th>ID/Pass</th><th>${t('thPDF')}</th><th>WA</th><th>📅</th><th>✏️</th><th>${t('thDelete')}</th></tr></thead>
       <tbody>${stus.map((s,i)=>`<tr><td>${i+1}</td><td>${s.name}</td><td>${s.phone||'—'}</td>
       <td><button class="btn btn-green btn-xs" onclick="goToAtt('${s.id}')">📅</button></td>
       <td><button class="btn btn-blue btn-xs" onclick="exportStudentPDF('${s.id}')">📄</button></td>
@@ -1045,6 +1067,16 @@ window.sendAttWhatsApp=function(){
   lines.push((LANG==='ur'?'  مجموعی غیر حاضر: ':'  Total Missed: ')+`❌${totM}`);
   lines.push('');lines.push('━━━━━━━━━━━━━━━━');
   lines.push(LANG==='ur'?'گھر پر نماز کی ترغیب دیتے رہیں۔':'Please encourage prayers at home.');
+  lines.push('');
+  // Add student login details
+  if(stu.stuId&&stu.stuPass){
+    lines.push(LANG==='ur'?'🔑 *آپ کے بچے کا پورٹل لاگ ان:*':'🔑 *Portal Login for Guardian:*');
+    lines.push((LANG==='ur'?'  🌐 لنک: ':'  🌐 Link: ')+'https://masjidboard.github.io/darululoom-taloja/');
+    lines.push((LANG==='ur'?'  آئی ڈی: ':'  ID: ')+stu.stuId);
+    lines.push((LANG==='ur'?'  پاس ورڈ: ':'  Password: ')+stu.stuPass);
+    lines.push(LANG==='ur'?'  (اپنے بچے کا مکمل نماز ریکارڈ دیکھیں)':'  (View complete prayer record of your child)');
+    lines.push('');
+  }
   lines.push(LANG==='ur'?'جزاکم اللہ خیرا 🤲':'JazakAllah Khair 🤲');
   const msg=lines.join('\n');
   const phone=stu.phone.replace(/[^0-9]/g,'');
@@ -1351,6 +1383,80 @@ window.saveEditStudent=async function(id){
   closeModal();
   renderStudents();
   toast(LANG==='ur'?'طالب علم ترمیم ہو گیا ✅':'Student updated ✅');
+};
+
+// ===== STUDENT VIEW =====
+function initStudentView(){
+  const stu=DB.students.find(s=>s.stuId===CU.id||s.id===CU.studentId);
+  if(!stu){document.getElementById('studentViewChart').innerHTML='<div class="empty">ریکارڈ نہیں ملا</div>';return;}
+  document.getElementById('svStudentName').textContent=stu.name+' — '+(stu.className||stu.cat);
+  const MONTHS=T[LANG].MONTHS;
+  const now=new Date();
+  const mSel=document.getElementById('svMonth');
+  mSel.innerHTML=MONTHS.map((m,i)=>`<option value="${i}" ${i===now.getMonth()+12?'selected':''}>${m}</option>`).join('');
+  const yr=now.getFullYear();
+  document.getElementById('svYear').innerHTML=[yr-1,yr,yr+1].map(y=>`<option value="${y}" ${y===yr?'selected':''}>${y}</option>`).join('');
+  renderStudentView();
+}
+
+window.renderStudentView=function(){
+  const stu=DB.students.find(s=>s.stuId===CU.id||s.id===CU.studentId);
+  if(!stu){return;}
+  const month=document.getElementById('svMonth').value;
+  const year=document.getElementById('svYear').value;
+  const MONTHS=T[LANG].MONTHS;
+  const NAMAZ=T[LANG].NAMAZ;
+  const key=`${stu.id}_${year}_${month}`;
+  const att=(DB.attendance&&DB.attendance[key])||{};
+  const days=Array.from({length:31},(_,i)=>i+1);
+  const getSymCls=(val,jamaat)=>{
+    if(jamaat){if(val===true)return{sym:'✅',cls:'c-yes'};if(val==='alone')return{sym:'🟡',cls:'c-alone'};if(val===false)return{sym:'❌',cls:'c-no'};return{sym:'◯',cls:'c-empty'};}
+    if(val===true)return{sym:'✅',cls:'c-yes'};if(val===false)return{sym:'❌',cls:'c-no'};return{sym:'◯',cls:'c-empty'};
+  };
+  let th=`<th style="min-width:100px;font-size:10px">${LANG==='ur'?'نماز':'Prayer'}</th>`+days.map(d=>`<th style="font-size:10px">${d}</th>`).join('');
+  let rows='';let lastGroup='';
+  NAMAZ.forEach(row=>{
+    const jamaat=row.key.includes('_farz');
+    if(row.group&&row.group!==lastGroup){rows+=`<tr><td colspan="${days.length+1}" style="background:var(--green);color:white;font-size:11px;padding:4px 8px;font-weight:700">🕌 ${row.group}</td></tr>`;lastGroup=row.group;}
+    else if(!row.group){lastGroup='';}
+    const cells=days.map(d=>{const val=att[row.key]?att[row.key][d]:undefined;const {sym,cls}=getSymCls(val,jamaat);
+      return`<td><span class="${cls}" style="font-size:12px">${sym}</span></td>`;}).join('');
+    rows+=`<tr><td style="font-size:10px;padding:3px 6px;background:var(--gp);white-space:nowrap;text-align:${LANG==='en'?'left':'right'}">${row.label}</td>${cells}</tr>`;
+  });
+  // summary
+  const farzKeys=[
+    {g:LANG==='ur'?'فجر':'Fajr',k:'fajr_farz'},{g:LANG==='ur'?'ظہر':'Zuhr',k:'zuhr_farz'},
+    {g:LANG==='ur'?'عصر':'Asr',k:'asr_farz'},{g:LANG==='ur'?'مغرب':'Maghrib',k:'maghrib_farz'},
+    {g:LANG==='ur'?'عشاء':'Isha',k:'isha_farz'}
+  ];
+  let sumHtml='';let totJ=0,totA=0,totM=0;
+  farzKeys.forEach(({g,k})=>{
+    let j=0,a=0,m=0;
+    for(let d=1;d<=31;d++){const v=att[k]?att[k][d]:undefined;if(v===true)j++;else if(v==='alone')a++;else if(v===false)m++;}
+    if(j+a+m===0)return;
+    totJ+=j;totA+=a;totM+=m;
+    sumHtml+=`<div style="display:flex;justify-content:space-between;padding:5px 10px;border-bottom:1px solid var(--border);font-size:12px"><span>${g}</span><span>✅${j} 🟡${a} ❌${m}</span></div>`;
+  });
+  document.getElementById('studentViewChart').innerHTML=`
+    <div style="background:var(--green);color:white;padding:10px;border-radius:8px 8px 0 0;font-size:13px;font-weight:700;text-align:center">
+      ${stu.name} — ${MONTHS[month]} ${year}
+    </div>
+    <div style="font-size:10px;padding:5px 10px;background:var(--gp);border-bottom:1px solid var(--border)">
+      ✅=${LANG==='ur'?'باجماعت':'Jamaat'} 🟡=${LANG==='ur'?'اکیلے':'Alone'} ❌=${LANG==='ur'?'نہیں':'No'} ◯=${LANG==='ur'?'درج نہیں':'Blank'}
+    </div>
+    <div style="overflow-x:auto;border:1px solid var(--border);margin-bottom:12px">
+      <table style="border-collapse:collapse;font-size:11px;min-width:700px">
+        <thead><tr style="background:var(--green);color:white">${th}</tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+    ${sumHtml?`<div class="card" style="margin-top:0">
+      <div class="card-title">${LANG==='ur'?'📊 فرض نمازوں کا خلاصہ':'📊 Farz Summary'}</div>
+      ${sumHtml}
+      <div style="display:flex;justify-content:space-between;padding:7px 10px;font-weight:700;font-size:13px;color:var(--green)">
+        <span>${LANG==='ur'?'مجموعی':'Total'}</span><span>✅${totJ} 🟡${totA} ❌${totM}</span>
+      </div>
+    </div>`:''}`;
 };
 
 window.closeModal=function(){document.getElementById('ov').classList.remove('open');};
