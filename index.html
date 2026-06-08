@@ -125,7 +125,7 @@ tbody td{padding:7px 10px;vertical-align:middle;}
 [data-lang="ur"] .namaz-table .row-label,[data-lang="ur"] .namaz-table .sub-label{text-align:right;}
 [data-lang="en"] .namaz-table .row-label,[data-lang="en"] .namaz-table .sub-label{text-align:left;}
 .check-cell{cursor:pointer;font-size:14px;}.check-cell:hover{transform:scale(1.3);}
-.c-yes{color:#1a8c3a;}.c-no{color:#cc2222;}.c-empty{color:#888;}
+.c-yes{color:#1a8c3a;}.c-no{color:#cc2222;}.c-empty{color:#888;}.c-alone{color:#c8952a;}
 .section-head{font-size:13px;font-weight:700;color:var(--blue);margin:12px 0 8px;padding:6px 10px;background:var(--card);border-radius:7px;border-right:4px solid var(--blue);}
 [data-lang="en"] .section-head{border-right:none;border-left:4px solid var(--blue);}
 .class-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(185px,1fr));gap:10px;}
@@ -834,39 +834,86 @@ window.loadAttendance=function(){
   const key=`${stuId}_${year}_${month}`;if(!DB.attendance)DB.attendance={};
   const att=DB.attendance[key]||{};const days=Array.from({length:31},(_,i)=>i+1);
   const MONTHS=T[LANG].MONTHS,NAMAZ=T[LANG].NAMAZ;
-  let th=`<th style="min-width:110px">${LANG==='ur'?'نماز':'Prayer'}</th>`+days.map(d=>`<th>${d}</th>`).join('');
+  const isJamaat=k=>k.includes('_farz');
+  const getSymCls=(val,jamaat)=>{
+    if(jamaat){
+      if(val===true)return{sym:'✅',cls:'c-yes'};
+      if(val==='alone')return{sym:'🟡',cls:'c-alone'};
+      if(val===false)return{sym:'❌',cls:'c-no'};
+      return{sym:'◯',cls:'c-empty'};
+    } else {
+      if(val===true)return{sym:'✅',cls:'c-yes'};
+      if(val===false)return{sym:'❌',cls:'c-no'};
+      return{sym:'◯',cls:'c-empty'};
+    }
+  };
+  // select-all row per day
+  let th=`<th style="min-width:110px">${LANG==='ur'?'نماز':'Prayer'}</th>`+
+    days.map(d=>`<th style="padding:3px 2px"><div>${d}</div><div><span style="cursor:pointer;font-size:11px;display:block" title="${LANG==='ur'?'سب ✅':'All ✅'}" onclick="selectAllDay('${key}',${d})">☑</span></div></th>`).join('');
   let rows='';let lastGroup='';
   NAMAZ.forEach(row=>{
     if(row.group&&row.group!==lastGroup){
       rows+=`<tr><td class="group-header" colspan="${days.length+1}" style="background:var(--green);color:white;font-size:12px;padding:5px 10px;font-weight:700;">🕌 ${row.group}</td></tr>`;
       lastGroup=row.group;
     } else if(!row.group){lastGroup='';}
-    let cells=days.map(d=>{const val=att[row.key]?att[row.key][d]:undefined;
-      const sym=val===true?'✅':val===false?'❌':'◯';const cls=val===true?'c-yes':val===false?'c-no':'c-empty';
-      return`<td><span class="check-cell ${cls}" onclick="toggleAtt('${key}','${row.key}',${d})">${sym}</span></td>`;}).join('');
+    const jamaat=isJamaat(row.key);
+    let cells=days.map(d=>{
+      const val=att[row.key]?att[row.key][d]:undefined;
+      const {sym,cls}=getSymCls(val,jamaat);
+      return`<td><span class="check-cell ${cls}" onclick="toggleAtt('${key}','${row.key}',${d},${jamaat})">${sym}</span></td>`;}).join('');
     rows+=`<tr><td class="${row.group?'sub-label':'row-label'}">${row.label}</td>${cells}</tr>`;
   });
   document.getElementById('attChart').innerHTML=`
     <div class="namaz-header">${LANG==='ur'?'نماز حاضری':'Prayer Attendance'} — ${stu.name} — ${MONTHS[month]} ${year}</div>
     <div class="namaz-subheader"><span>${LANG==='ur'?'درجہ':'Class'}: <b>${stu.className||stu.cat}</b></span>
-      <span>✅=${LANG==='ur'?'پڑھی':'Yes'} ❌=${LANG==='ur'?'نہیں':'No'} ◯=${LANG==='ur'?'درج نہیں':'Blank'}</span>
+      <span>✅=${LANG==='ur'?'باجماعت':'With Jamaat'} 🟡=${LANG==='ur'?'اکیلے':'Alone'} ❌=${LANG==='ur'?'نہیں پڑھا':'Not Prayed'} ◯=${LANG==='ur'?'درج نہیں':'Blank'}</span>
       <span><button class="btn btn-green btn-sm" onclick="saveAtt('${key}')">${LANG==='ur'?'💾 محفوظ':'💾 Save'}</button></span></div>
     <div class="namaz-wrap"><table class="namaz-table"><thead><tr>${th}</tr></thead><tbody>${rows}</tbody></table></div>
     <div style="margin-top:8px;font-size:11px;color:var(--subtext)">${t('signTeacher')}: .................. &nbsp; ${t('signParent')}: ..................</div>`;
 };
 
-window.toggleAtt=async function(key,rowKey,day){
+window.toggleAtt=async function(key,rowKey,day,jamaat=false){
   if(!DB.attendance)DB.attendance={};if(!DB.attendance[key])DB.attendance[key]={};if(!DB.attendance[key][rowKey])DB.attendance[key][rowKey]={};
   const cur=DB.attendance[key][rowKey][day];
-  const next=cur===undefined?true:cur===true?false:undefined;
+  let next;
+  if(jamaat){
+    // 4 states: undefined → true(باجماعت) → 'alone'(اکیلے) → false(نہیں) → undefined
+    if(cur===undefined)next=true;
+    else if(cur===true)next='alone';
+    else if(cur==='alone')next=false;
+    else next=undefined;
+  } else {
+    // 3 states: undefined → true → false → undefined
+    if(cur===undefined)next=true;
+    else if(cur===true)next=false;
+    else next=undefined;
+  }
   if(next===undefined){delete DB.attendance[key][rowKey][day];}
   else{DB.attendance[key][rowKey][day]=next;}
-  // update just the clicked cell without reloading entire chart
-  const sym=next===true?'✅':next===false?'❌':'◯';
-  const cls=next===true?'c-yes':next===false?'c-no':'c-empty';
-  const span=document.querySelector(`[onclick="toggleAtt('${key}','${rowKey}',${day})"]`);
+  // update just the clicked cell
+  let sym,cls;
+  if(jamaat){
+    sym=next===true?'✅':next==='alone'?'🟡':next===false?'❌':'◯';
+    cls=next===true?'c-yes':next==='alone'?'c-alone':next===false?'c-no':'c-empty';
+  } else {
+    sym=next===true?'✅':next===false?'❌':'◯';
+    cls=next===true?'c-yes':next===false?'c-no':'c-empty';
+  }
+  const span=document.querySelector(`[onclick="toggleAtt('${key}','${rowKey}',${day},${jamaat})"]`);
   if(span){span.textContent=sym;span.className='check-cell '+cls;}
-  // save in background
+  save();
+};
+
+window.selectAllDay=function(key,day){
+  if(!DB.attendance)DB.attendance={};if(!DB.attendance[key])DB.attendance[key]={};
+  const NAMAZ=T[LANG].NAMAZ;
+  NAMAZ.forEach(row=>{
+    if(!DB.attendance[key][row.key])DB.attendance[key][row.key]={};
+    DB.attendance[key][row.key][day]=true;
+    const jamaat=row.key.includes('_farz');
+    const span=document.querySelector(`[onclick="toggleAtt('${key}','${row.key}',${day},${jamaat})"]`);
+    if(span){span.textContent='✅';span.className='check-cell c-yes';}
+  });
   save();
 };
 
