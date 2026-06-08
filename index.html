@@ -1262,8 +1262,7 @@ window.sendAttFromModal=function(stuId){
   });
   lines.push('');lines.push('━━━━━━━━━━━━━━━━');
   lines.push(LANG==='ur'?'جزاکم اللہ خیرا 🤲':'JazakAllah Khair 🤲');
-  const msg=lines.join('
-');
+  const msg=lines.join('\n');
   const phone=stu.phone.replace(/[^0-9]/g,'');
   window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`,'_blank');
 };
