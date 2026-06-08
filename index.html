@@ -143,6 +143,49 @@ tbody td{padding:7px 10px;vertical-align:middle;}
 .modal{background:var(--card);border-radius:16px;padding:22px;width:500px;max-width:95vw;max-height:90vh;overflow-y:auto;}
 .wa-tpl{background:var(--gp);border:1px solid var(--border);border-radius:10px;padding:11px;font-size:12px;line-height:2;color:var(--text);margin:8px 0;white-space:pre-line;}
 .btn-wrap{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;}
+
+/* ===== RESPONSIVE ===== */
+/* Wide tables scroll horizontally inside their cards instead of breaking layout */
+#studTable,#accTable,#attChart,#myStudTable,#studentViewChart,#classesDisplay{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+#studTable table,#accTable table,#myStudTable table{min-width:640px;}
+
+/* Tablet */
+@media (max-width:1024px){
+  .main{max-width:100%;padding:14px;}
+  .class-grid{grid-template-columns:repeat(auto-fill,minmax(160px,1fr));}
+}
+
+/* Mobile */
+@media (max-width:768px){
+  .main{padding:10px;}
+  .topbar{height:auto;min-height:52px;padding:6px 10px;flex-wrap:wrap;gap:5px;}
+  .topbar-title{font-size:13px;}
+  .topbar-right{gap:4px;flex-wrap:wrap;justify-content:flex-end;}
+  .tb-btn{padding:4px 9px;font-size:11px;}
+  #uLabel{display:none;}
+  .card{padding:13px;}
+  .card-title{font-size:13px;}
+  .stat-num{font-size:22px;}
+  .stats-grid{grid-template-columns:repeat(auto-fit,minmax(105px,1fr));gap:8px;}
+  .tab-btn{padding:6px 11px;font-size:12px;}
+  table{font-size:11px;}
+  thead th,tbody td{padding:6px 7px;}
+  .modal{padding:18px;}
+}
+
+/* Small phones */
+@media (max-width:480px){
+  .main{padding:8px;}
+  .login-box{padding:28px 20px;}
+  .topbar-title{font-size:12px;}
+  .tb-btn{padding:4px 7px;font-size:10px;}
+  .toggle-wrap{gap:3px;}
+  .class-grid{grid-template-columns:1fr 1fr;}
+  .stats-grid{grid-template-columns:1fr 1fr;}
+  .btn{padding:7px 12px;}
+  /* Stack each form field full-width so inputs aren't cramped */
+  .form-row .fg{flex:1 1 100%;min-width:100%;}
+}
 </style>
 </head>
 <body>
@@ -248,6 +291,7 @@ tbody td{padding:7px 10px;vertical-align:middle;}
           <input type="file" id="stuImportFile" accept=".xlsx,.xls,.csv" style="display:none" onchange="importStudents(this)">
           <button class="btn btn-gold" onclick="exportStudentsExcel()" id="btnExportStu">📤 Excel Export</button>
           <button class="btn btn-gold" onclick="downloadStudentTemplate()" id="btnTplStu">📋 Template</button>
+          <button class="btn btn-blue" onclick="generateAllCredentials()" id="btnGenCreds">🔑 سب کے لاگ ان بنائیں</button>
         </div>
       </div>
       <div class="card" style="padding:10px 14px">
@@ -733,7 +777,7 @@ function renderStudents(){
   if(search)stus=stus.filter(s=>s.name.toLowerCase().includes(search));
   const cc={حفظ:'bg',دینیات:'bb',عالمیت:'br'};
   document.getElementById('studTable').innerHTML=stus.length
-    ?`<table><thead><tr><th>#</th><th>${t('thName')}</th><th>${t('thPhone')}</th><th>${t('thCat')}</th><th>${t('thClass')}</th><th>${t('thPDF')}</th><th>${t('thDelete')}</th></tr></thead>
+    ?`<table><thead><tr><th>#</th><th>${t('thName')}</th><th>${t('thPhone')}</th><th>${t('thCat')}</th><th>${t('thClass')}</th><th>${t('thId')} / ${t('thPass')}</th><th>${t('thPDF')}</th><th>WA</th><th>${LANG==='ur'?'چارٹ':'Chart'}</th><th>${LANG==='ur'?'ترمیم':'Edit'}</th><th>${t('thDelete')}</th></tr></thead>
     <tbody>${stus.map((s,i)=>`<tr><td>${i+1}</td><td>${s.name}</td><td>${s.phone||'—'}</td>
     <td><span class="badge ${cc[s.cat]||'bo'}">${s.cat}</span></td><td>${s.className||'—'}</td>
     <td><div style="font-size:10px;background:var(--gp);padding:2px 5px;border-radius:4px;font-family:monospace">${s.stuId||'—'}</div><div style="font-size:9px;color:var(--subtext)">${s.stuPass||'—'}</div></td>
@@ -760,13 +804,26 @@ window.importStudents=async function(input){
     else if(cat.includes('دین')||cat.toLowerCase().includes('dini'))cat='دینیات';
     if(!name)continue;
     const cls=DB.classes.find(c=>c.name===clsName||(c.cat===cat&&c.name===clsName));
-    DB.students.push({id:'s'+Date.now()+'_'+added,cat:cat||cls?.cat||'',classId:cls?.id||'',className:cls?.name||clsName,name,phone});added++;
+    const newStu={id:'s'+Date.now()+'_'+added,cat:cat||cls?.cat||'',classId:cls?.id||'',className:cls?.name||clsName,name,phone};
+    DB.students.push(newStu);
+    ensureStudentLogin(newStu); // auto-generate ID + password + account for each imported student
+    added++;
   }
   logAct(`${added} students imported`);await save();renderStudents();toast(`${added} ${t('addedToast')}`);input.value='';
 };
 
+window.generateAllCredentials=async function(){
+  let count=0;
+  DB.students.forEach(s=>{if(ensureStudentLogin(s))count++;});
+  if(count===0){toast(LANG==='ur'?'سب کے لاگ ان پہلے سے موجود ہیں ✅':'All students already have logins ✅');return;}
+  logAct(`Generated logins for ${count} students`);
+  await save();
+  renderStudents();
+  toast(LANG==='ur'?`${count} طلبہ کے لاگ ان بن گئے ✅`:`${count} student logins created ✅`);
+};
+
 window.exportStudentsExcel=function(){
-  const rows=DB.students.map(s=>({'نام / Name':s.name,'واٹس ایپ / WhatsApp':s.phone||'','کیٹیگری / Category':s.cat,'درجہ / Class':s.className||''}));
+  const rows=DB.students.map(s=>({'نام / Name':s.name,'واٹس ایپ / WhatsApp':s.phone||'','کیٹیگری / Category':s.cat,'درجہ / Class':s.className||'','آئی ڈی / ID':s.stuId||'','پاسورڈ / Password':s.stuPass||''}));
   const ws=XLSX.utils.json_to_sheet(rows);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Students');
   XLSX.writeFile(wb,'darululoom_students.xlsx');toast(t('excelReady'));
 };
@@ -1016,6 +1073,21 @@ window.goToAtt=function(stuId){
     document.querySelectorAll('.tab-btn').forEach(b=>{b.classList.toggle('active',b.textContent.includes(LANG==='ur'?'نماز':'Prayer'));});},100);
 };
 
+// Ensure a student has login credentials (auto-generate + create account if missing)
+function ensureStudentLogin(stu){
+  if(stu.stuId&&stu.stuPass)return false;
+  let stuNum;
+  do{stuNum='STU'+Math.floor(1000+Math.random()*9000);}while(DB.accounts&&DB.accounts.find(a=>a.id===stuNum));
+  const base=(stu.name||'student').split(' ')[0].replace(/[^a-zA-Z\u0600-\u06FF]/g,'')||'stu';
+  const stuPass=base+Math.floor(100+Math.random()*900);
+  stu.stuId=stuNum;stu.stuPass=stuPass;
+  if(!DB.accounts)DB.accounts=[];
+  if(!DB.accounts.find(a=>a.studentId===stu.id)){
+    DB.accounts.push({id:stuNum,pass:stuPass,name:stu.name,role:'student',studentId:stu.id});
+  }
+  return true;
+}
+
 window.sendAttWhatsApp=function(){
   const stuId=document.getElementById('attStu').value;
   if(!stuId){toast(t('selectFirst'),'red');return;}
@@ -1076,19 +1148,19 @@ window.sendAttWhatsApp=function(){
   lines.push('');lines.push('━━━━━━━━━━━━━━━━');
   lines.push(LANG==='ur'?'گھر پر نماز کی ترغیب دیتے رہیں۔':'Please encourage prayers at home.');
   lines.push('');
-  // Add student login details
-  if(stu.stuId&&stu.stuPass){
-    lines.push(LANG==='ur'?'🔑 *آپ کے بچے کا پورٹل لاگ ان:*':'🔑 *Portal Login for Guardian:*');
-    lines.push((LANG==='ur'?'  🌐 لنک: ':'  🌐 Link: ')+'https://masjidboard.github.io/darululoom-taloja/');
-    lines.push((LANG==='ur'?'  آئی ڈی: ':'  ID: ')+stu.stuId);
-    lines.push((LANG==='ur'?'  پاس ورڈ: ':'  Password: ')+stu.stuPass);
-    lines.push(LANG==='ur'?'  (اپنے بچے کا مکمل نماز ریکارڈ دیکھیں)':'  (View complete prayer record of your child)');
-    lines.push('');
-  }
+  // Add student login details (auto-generate if missing)
+  const created1=ensureStudentLogin(stu);
+  lines.push(LANG==='ur'?'🔑 *آپ کے بچے کا پورٹل لاگ ان:*':'🔑 *Portal Login for Guardian:*');
+  lines.push((LANG==='ur'?'  🌐 لنک: ':'  🌐 Link: ')+'https://masjidboard.github.io/darululoom-taloja/');
+  lines.push((LANG==='ur'?'  آئی ڈی: ':'  ID: ')+stu.stuId);
+  lines.push((LANG==='ur'?'  پاس ورڈ: ':'  Password: ')+stu.stuPass);
+  lines.push(LANG==='ur'?'  (اپنے بچے کا مکمل نماز ریکارڈ دیکھیں)':'  (View complete prayer record of your child)');
+  lines.push('');
   lines.push(LANG==='ur'?'جزاکم اللہ خیرا 🤲':'JazakAllah Khair 🤲');
   const msg=lines.join('\n');
   const phone=stu.phone.replace(/[^0-9]/g,'');
   window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`,'_blank');
+  if(created1)save();
 };
 
 window.sendStudentWA=function(stuId){
@@ -1261,10 +1333,19 @@ window.sendAttFromModal=function(stuId){
     lines.push(`  ${row.label}: ✅${yes}${jamaat?' 🟡'+alone:''} ❌${no}`);
   });
   lines.push('');lines.push('━━━━━━━━━━━━━━━━');
+  // Add student login details (auto-generate if missing)
+  const created2=ensureStudentLogin(stu);
+  lines.push(LANG==='ur'?'🔑 *آپ کے بچے کا پورٹل لاگ ان:*':'🔑 *Portal Login for Guardian:*');
+  lines.push((LANG==='ur'?'  🌐 لنک: ':'  🌐 Link: ')+'https://masjidboard.github.io/darululoom-taloja/');
+  lines.push((LANG==='ur'?'  آئی ڈی: ':'  ID: ')+stu.stuId);
+  lines.push((LANG==='ur'?'  پاس ورڈ: ':'  Password: ')+stu.stuPass);
+  lines.push(LANG==='ur'?'  (اپنے بچے کا مکمل نماز ریکارڈ دیکھیں)':'  (View complete prayer record of your child)');
+  lines.push('');
   lines.push(LANG==='ur'?'جزاکم اللہ خیرا 🤲':'JazakAllah Khair 🤲');
   const msg=lines.join('\n');
   const phone=stu.phone.replace(/[^0-9]/g,'');
   window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`,'_blank');
+  if(created2)save();
 };
 
 window.exportAttFromModal=function(stuId){
