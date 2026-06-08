@@ -547,9 +547,36 @@ window.showTab=function(name,btn){
 
 function renderDashboard(){
   const cats=['حفظ','دینیات','عالمیت'],catEn=['Hifz','Diniyat','Aalimiyat'];
-  let h=`<div class="stat-box"><div class="stat-num">${DB.students.length}</div><div class="stat-label">${t('totalStudents')}</div></div>`;
-  h+=`<div class="stat-box"><div class="stat-num">${DB.classes.length}</div><div class="stat-label">${t('totalClasses')}</div></div>`;
-  cats.forEach((c,i)=>{const n=DB.students.filter(s=>s.cat===c).length;h+=`<div class="stat-box"><div class="stat-num">${n}</div><div class="stat-label">${LANG==='en'?catEn[i]:c}</div></div>`;});
+  // top summary
+  let h=`
+    <div class="stat-box" style="border:2px solid var(--green)">
+      <div class="stat-num">${DB.classes.length}</div>
+      <div class="stat-label">${LANG==='ur'?'مجموعی درجات':'Total Classes'}</div>
+    </div>
+    <div class="stat-box" style="border:2px solid var(--gold)">
+      <div class="stat-num">${DB.students.length}</div>
+      <div class="stat-label">${LANG==='ur'?'مجموعی طلبہ':'Total Students'}</div>
+    </div>`;
+  // per category
+  cats.forEach((c,i)=>{
+    const clsN=DB.classes.filter(x=>x.cat===c).length;
+    const stuN=DB.students.filter(x=>x.cat===c).length;
+    const label=LANG==='en'?catEn[i]:c;
+    h+=`<div class="stat-box" style="border:1px solid var(--border);padding:14px 10px">
+      <div style="font-size:13px;font-weight:700;color:var(--green);margin-bottom:8px;border-bottom:1px solid var(--border);padding-bottom:6px">${label}</div>
+      <div style="display:flex;justify-content:space-around;gap:8px">
+        <div style="text-align:center">
+          <div class="stat-num" style="font-size:22px">${clsN}</div>
+          <div class="stat-label">${LANG==='ur'?'درجات':'Classes'}</div>
+        </div>
+        <div style="width:1px;background:var(--border)"></div>
+        <div style="text-align:center">
+          <div class="stat-num" style="font-size:22px;color:var(--gold)">${stuN}</div>
+          <div class="stat-label">${LANG==='ur'?'طلبہ':'Students'}</div>
+        </div>
+      </div>
+    </div>`;
+  });
   document.getElementById('statsGrid').innerHTML=h;
   const recent=(DB.log||[]).slice(-8).reverse();
   document.getElementById('recentLog').innerHTML=recent.length
@@ -602,7 +629,11 @@ window.importClasses=async function(input){
   const rows=XLSX.utils.sheet_to_json(ws,{defval:''});let added=0;
   const gv=(r,...keys)=>{for(const k of Object.keys(r)){for(const kw of keys){if(k.includes(kw))return String(r[k]||'').trim();}}return'';};
   for(const r of rows){
-    const cat=gv(r,'کیٹیگری','Category','cat');
+    let cat=gv(r,'کیٹیگری','Category','cat');
+    // normalize category spelling
+    if(cat.includes('عالم')||cat.toLowerCase().includes('aalim')||cat.toLowerCase().includes('alim'))cat='عالمیت';
+    else if(cat.includes('حفظ')||cat.toLowerCase().includes('hifz')||cat.toLowerCase().includes('hafiz'))cat='حفظ';
+    else if(cat.includes('دین')||cat.toLowerCase().includes('dini')||cat.toLowerCase().includes('din'))cat='دینیات';
     const name=gv(r,'درجہ نام','Class Name','name');
     const teacher=gv(r,'استاد','Teacher','teacher');
     const cid=gv(r,'آئی ڈی','ID','id','Id');
@@ -681,7 +712,10 @@ window.importStudents=async function(input){
     const name=gv(r,'نام','Name','name');
     const phone=gv(r,'واٹس ایپ','WhatsApp','phone','Phone');
     const clsName=gv(r,'درجہ','Class','class');
-    const cat=gv(r,'کیٹیگری','Category','cat');
+    let cat=gv(r,'کیٹیگری','Category','cat');
+    if(cat.includes('عالم')||cat.toLowerCase().includes('aalim')||cat.toLowerCase().includes('alim'))cat='عالمیت';
+    else if(cat.includes('حفظ')||cat.toLowerCase().includes('hifz'))cat='حفظ';
+    else if(cat.includes('دین')||cat.toLowerCase().includes('dini'))cat='دینیات';
     if(!name)continue;
     const cls=DB.classes.find(c=>c.name===clsName||(c.cat===cat&&c.name===clsName));
     DB.students.push({id:'s'+Date.now()+'_'+added,cat:cat||cls?.cat||'',classId:cls?.id||'',className:cls?.name||clsName,name,phone});added++;
