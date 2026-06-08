@@ -622,6 +622,7 @@ function renderClasses(){
     else{h+=`<div class="class-grid">`+cls.map(c=>{
       const acc=DB.accounts.find(a=>a.classId===c.id);const cnt=DB.students.filter(s=>s.classId===c.id).length;
       return`<div class="class-card"><button class="cc-del" onclick="deleteClass('${c.id}')">✕</button>
+        <button class="cc-del" style="${LANG==='ur'?'left:32px':'right:32px'};background:#d0e4f7;color:#1a3e6b" onclick="editClass('${c.id}')">✏️</button>
         <div class="cc-name">${c.name}</div>
         <div class="cc-info">${t('clsTeacher')}: ${c.teacher||'—'}</div>
         <div class="cc-info">${t('clsStudents')}: ${cnt}</div>
@@ -707,6 +708,9 @@ function renderStudents(){
     <tbody>${stus.map((s,i)=>`<tr><td>${i+1}</td><td>${s.name}</td><td>${s.phone||'—'}</td>
     <td><span class="badge ${cc[s.cat]||'bo'}">${s.cat}</span></td><td>${s.className||'—'}</td>
     <td><button class="btn btn-blue btn-xs" onclick="exportStudentPDF('${s.id}')">📄</button></td>
+    <td>${s.phone?`<button class="btn btn-xs" style="background:#25d366;color:white" onclick="openAdminAtt('${s.id}')">📱 WA</button>`:'—'}</td>
+    <td><button class="btn btn-xs" style="background:#1a3e6b;color:white" onclick="openAdminAtt('${s.id}')">📅 چارٹ</button></td>
+    <td><button class="btn btn-gold btn-xs" onclick="editStudent('${s.id}')">✏️</button></td>
     <td><button class="btn btn-red btn-xs" onclick="deleteStudent('${s.id}')">✕</button></td></tr>`).join('')}</tbody></table>`
     :`<div class="empty">${t('noStudent')}</div>`;
 }
@@ -945,7 +949,7 @@ function renderMyStudents(){
   const cls=DB.classes.find(c=>c.id===CU.classId);
   document.getElementById('myStudTable').innerHTML=stus.length
     ?`<div style="margin-bottom:8px;font-size:13px;color:var(--subtext)">${LANG==='ur'?'درجہ':'Class'}: <b>${cls?cls.cat+'—'+cls.name:'—'}</b> | ${LANG==='ur'?'کل':'Total'}: <b>${stus.length}</b></div>`+
-      `<table><thead><tr><th>#</th><th>${t('thName')}</th><th>${t('thPhone')}</th><th>${LANG==='ur'?'حاضری':'Attendance'}</th><th>${t('thPDF')}</th><th>WA</th></tr></thead>
+      `<table><thead><tr><th>#</th><th>${t('thName')}</th><th>${t('thPhone')}</th><th>${LANG==='ur'?'حاضری':'Attendance'}</th><th>${t('thPDF')}</th><th>WA</th><th>📅</th><th>✏️</th><th>${t('thDelete')}</th></tr></thead>
       <tbody>${stus.map((s,i)=>`<tr><td>${i+1}</td><td>${s.name}</td><td>${s.phone||'—'}</td>
       <td><button class="btn btn-green btn-xs" onclick="goToAtt('${s.id}')">📅</button></td>
       <td><button class="btn btn-blue btn-xs" onclick="exportStudentPDF('${s.id}')">📄</button></td>
@@ -986,7 +990,7 @@ window.sendAttWhatsApp=function(){
   const stuId=document.getElementById('attStu').value;
   if(!stuId){toast(t('selectFirst'),'red');return;}
   const stu=DB.students.find(s=>s.id===stuId);
-  if(!stu){return;}
+  if(!stu)return;
   if(!stu.phone){toast(LANG==='ur'?'اس طالب علم کا نمبر درج نہیں':'No phone number','red');return;}
   const month=document.getElementById('attMonth').value;
   const year=document.getElementById('attYear').value;
@@ -994,106 +998,59 @@ window.sendAttWhatsApp=function(){
   const key=`${stuId}_${year}_${month}`;
   const att=(DB.attendance&&DB.attendance[key])||{};
   const NAMAZ=T[LANG].NAMAZ;
-
-  // Group namaz by prayer time
-  const groups={};
-  NAMAZ.forEach(row=>{
-    if(!groups[row.group||row.label])groups[row.group||row.label]=[];
-    groups[row.group||row.label].push(row);
-  });
-
-  // Count farz jamaat stats per group
-  const farzKeys={
-    'فجر':'fajr_farz','ظہر':'zuhr_farz','عصر':'asr_farz','مغرب':'maghrib_farz','عشاء':'isha_farz',
-    'Fajr':'fajr_farz','Zuhr':'zuhr_farz','Asr':'asr_farz','Maghrib':'maghrib_farz','Isha':'isha_farz'
-  };
-
-  // count days in month
-  const daysInMonth=31;
+  const getVal=(k,d)=>att[k]?att[k][d]:undefined;
   let lines=[];
-
-  // header
-  if(LANG==='ur'){
-    lines.push(`السلام علیکم ورحمۃ اللہ وبرکاتہ!`);
-    lines.push(`📚 دارالعلوم اسلامیہ عربیہ تلوجہ`);
-    lines.push(`━━━━━━━━━━━━━━━━`);
-    lines.push(`👤 طالب علم: *${stu.name}*`);
-    lines.push(`📖 درجہ: ${stu.className||stu.cat}`);
-    lines.push(`📅 ماہ: ${MONTHS[month]} ${year}`);
-    lines.push(`━━━━━━━━━━━━━━━━`);
-    lines.push(`🕌 *نماز باجماعت رپورٹ:*`);
-    lines.push(``);
-  } else {
-    lines.push(`Assalamu Alaikum!`);
-    lines.push(`📚 Darul Uloom Islamia Arabia Taloja`);
-    lines.push(`━━━━━━━━━━━━━━━━`);
-    lines.push(`👤 Student: *${stu.name}*`);
-    lines.push(`📖 Class: ${stu.className||stu.cat}`);
-    lines.push(`📅 Month: ${MONTHS[month]} ${year}`);
-    lines.push(`━━━━━━━━━━━━━━━━`);
-    lines.push(`🕌 *Prayer Attendance Report:*`);
-    lines.push(``);
-  }
-
-  // farz jamaat stats
-  const farzGroups=LANG==='ur'
-    ?[{g:'فجر',k:'fajr_farz'},{g:'ظہر',k:'zuhr_farz'},{g:'عصر',k:'asr_farz'},{g:'مغرب',k:'maghrib_farz'},{g:'عشاء',k:'isha_farz'}]
-    :[{g:'Fajr',k:'fajr_farz'},{g:'Zuhr',k:'zuhr_farz'},{g:'Asr',k:'asr_farz'},{g:'Maghrib',k:'maghrib_farz'},{g:'Isha',k:'isha_farz'}];
-
-  let totalJamaat=0,totalAlone=0,totalMissed=0,totalDays=0;
-
-  farzGroups.forEach(({g,k})=>{
-    const rec=att[k]||{};
-    let jamaat=0,alone=0,missed=0,blank=0;
-    for(let d=1;d<=31;d++){
-      const v=rec[d];
-      if(v===true)jamaat++;
-      else if(v==='alone')alone++;
-      else if(v===false)missed++;
-      else blank++;
-    }
-    const filled=jamaat+alone+missed;
-    if(filled===0)return;
-    totalJamaat+=jamaat;totalAlone+=alone;totalMissed+=missed;totalDays+=filled;
-    const bar='✅'.repeat(Math.min(jamaat,10))+'🟡'.repeat(Math.min(alone,5))+'❌'.repeat(Math.min(missed,5));
-    if(LANG==='ur'){
-      lines.push(`*${g}:*`);
-      lines.push(`  ✅ باجماعت: ${jamaat} | 🟡 اکیلے: ${alone} | ❌ غیر حاضر: ${missed}`);
-    } else {
-      lines.push(`*${g}:*`);
-      lines.push(`  ✅ Jamaat: ${jamaat} | 🟡 Alone: ${alone} | ❌ Missed: ${missed}`);
-    }
+  lines.push(LANG==='ur'?'السلام علیکم ورحمۃ اللہ وبرکاتہ!':'Assalamu Alaikum wa Rahmatullah!');
+  lines.push('📚 '+(LANG==='ur'?'دارالعلوم اسلامیہ عربیہ تلوجہ':'Darul Uloom Islamia Arabia Taloja'));
+  lines.push('━━━━━━━━━━━━━━━━');
+  lines.push((LANG==='ur'?'👤 طالب علم: ':'👤 Student: ')+`*${stu.name}*`);
+  lines.push((LANG==='ur'?'📖 درجہ: ':'📖 Class: ')+(stu.className||stu.cat));
+  lines.push((LANG==='ur'?'📅 ماہ: ':'📅 Month: ')+MONTHS[month]+' '+year);
+  lines.push('━━━━━━━━━━━━━━━━');
+  lines.push(LANG==='ur'?'🕌 *نماز حاضری کی مکمل تفصیل:*':'🕌 *Complete Prayer Attendance:*');
+  lines.push('');
+  let lastGrp='';
+  NAMAZ.forEach(row=>{
+    const jamaat=row.key.includes('_farz');
+    if(row.group&&row.group!==lastGrp){lines.push('');lines.push(`*🕐 ${row.group}*`);lastGrp=row.group;}
+    else if(!row.group){lastGrp='';}
+    let yes=0,alone=0,no=0;
+    for(let d=1;d<=31;d++){const v=getVal(row.key,d);if(v===true)yes++;else if(v==='alone')alone++;else if(v===false)no++;}
+    if(yes+alone+no===0)return;
+    let line=`  ${row.label}: `;
+    if(jamaat){line+=`✅${yes} 🟡${alone} ❌${no}`;}
+    else{line+=`✅${yes} ❌${no}`;}
+    lines.push(line);
   });
-
-  lines.push(``);
-  lines.push(`━━━━━━━━━━━━━━━━`);
-  if(LANG==='ur'){
-    lines.push(`📊 *مجموعی خلاصہ:*`);
-    lines.push(`✅ باجماعت: ${totalJamaat}`);
-    lines.push(`🟡 اکیلے: ${totalAlone}`);
-    lines.push(`❌ غیر حاضر: ${totalMissed}`);
-    lines.push(``);
-    lines.push(`گھر پر نماز کی ترغیب دیتے رہیں۔`);
-    lines.push(`جزاکم اللہ خیرا 🤲`);
-    lines.push(`دارالعلوم اسلامیہ عربیہ تلوجہ`);
-  } else {
-    lines.push(`📊 *Summary:*`);
-    lines.push(`✅ With Jamaat: ${totalJamaat}`);
-    lines.push(`🟡 Alone: ${totalAlone}`);
-    lines.push(`❌ Missed: ${totalMissed}`);
-    lines.push(``);
-    lines.push(`Please encourage prayers at home.`);
-    lines.push(`JazakAllah Khair 🤲`);
-    lines.push(`Darul Uloom Islamia Arabia Taloja`);
-  }
-
+  lines.push('');lines.push('━━━━━━━━━━━━━━━━');
+  lines.push(LANG==='ur'?'📊 *فرض نمازوں کا خلاصہ:*':'📊 *Farz Prayer Summary:*');
+  const farzKeys=[
+    {g:LANG==='ur'?'فجر':'Fajr',k:'fajr_farz'},
+    {g:LANG==='ur'?'ظہر':'Zuhr',k:'zuhr_farz'},
+    {g:LANG==='ur'?'عصر':'Asr',k:'asr_farz'},
+    {g:LANG==='ur'?'مغرب':'Maghrib',k:'maghrib_farz'},
+    {g:LANG==='ur'?'عشاء':'Isha',k:'isha_farz'}
+  ];
+  let totJ=0,totA=0,totM=0;
+  farzKeys.forEach(({g,k})=>{
+    let j=0,a=0,m=0;
+    for(let d=1;d<=31;d++){const v=getVal(k,d);if(v===true)j++;else if(v==='alone')a++;else if(v===false)m++;}
+    if(j+a+m===0)return;
+    totJ+=j;totA+=a;totM+=m;
+    lines.push(`  ${g}: ✅${j} 🟡${a} ❌${m}`);
+  });
+  lines.push('');
+  lines.push((LANG==='ur'?'  مجموعی باجماعت: ':'  Total Jamaat: ')+`✅${totJ}`);
+  lines.push((LANG==='ur'?'  مجموعی اکیلے: ':'  Total Alone: ')+`🟡${totA}`);
+  lines.push((LANG==='ur'?'  مجموعی غیر حاضر: ':'  Total Missed: ')+`❌${totM}`);
+  lines.push('');lines.push('━━━━━━━━━━━━━━━━');
+  lines.push(LANG==='ur'?'گھر پر نماز کی ترغیب دیتے رہیں۔':'Please encourage prayers at home.');
+  lines.push(LANG==='ur'?'جزاکم اللہ خیرا 🤲':'JazakAllah Khair 🤲');
   const msg=lines.join('\n');
-  const phone=stu.phone.replace(/\D/g,'');
-  const url=`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
-  window.open(url,'_blank');
+  const phone=stu.phone.replace(/[^0-9]/g,'');
+  window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`,'_blank');
 };
 
-// Also add WA button in my students list per student
 window.sendStudentWA=function(stuId){
   document.getElementById('attStu').value=stuId;
   const month=document.getElementById('attMonth')?.value;
@@ -1109,6 +1066,291 @@ window.sendStudentWA=function(stuId){
     return;
   }
   sendAttWhatsApp();
+};
+
+window.openAdminAtt=function(stuId){
+  // Admin can view and edit any student's attendance chart in a modal
+  const stu=DB.students.find(s=>s.id===stuId);if(!stu)return;
+  const now=new Date();
+  const MONTHS=T[LANG].MONTHS;
+  const NAMAZ=T[LANG].NAMAZ;
+
+  // build month/year selectors
+  let monthOpts=MONTHS.map((m,i)=>`<option value="${i}" ${i===now.getMonth()+12?'selected':''}>${m}</option>`).join('');
+  let yr=now.getFullYear();
+  let yearOpts=[yr-1,yr,yr+1].map(y=>`<option value="${y}" ${y===yr?'selected':''}>${y}</option>`).join('');
+
+  document.getElementById('mTitle').textContent=`📅 ${stu.name} — ${LANG==='ur'?'نماز حاضری':'Prayer Attendance'}`;
+  document.getElementById('mBody').innerHTML=`
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+      <div style="flex:1;min-width:130px">
+        <label style="font-size:11px;color:var(--subtext)">${LANG==='ur'?'مہینہ':'Month'}</label>
+        <select id="modalMonth" style="width:100%;padding:7px;border:2px solid var(--border);border-radius:8px;background:var(--input-bg);color:var(--text);font-family:inherit" onchange="renderModalAtt('${stuId}')">${monthOpts}</select>
+      </div>
+      <div style="flex:1;min-width:100px">
+        <label style="font-size:11px;color:var(--subtext)">${LANG==='ur'?'سال':'Year'}</label>
+        <select id="modalYear" style="width:100%;padding:7px;border:2px solid var(--border);border-radius:8px;background:var(--input-bg);color:var(--text);font-family:inherit" onchange="renderModalAtt('${stuId}')">${yearOpts}</select>
+      </div>
+      <div style="display:flex;align-items:flex-end;gap:6px;flex-wrap:wrap">
+        <button class="btn btn-green btn-sm" onclick="saveModalAtt('${stuId}')">${LANG==='ur'?'💾 محفوظ':'💾 Save'}</button>
+        ${stu.phone?`<button class="btn btn-sm" style="background:#25d366;color:white" onclick="sendAttFromModal('${stuId}')">${LANG==='ur'?'📱 WA بھیجیں':'📱 Send WA'}</button>`:''}
+        <button class="btn btn-gold btn-sm" onclick="exportAttFromModal('${stuId}')">${LANG==='ur'?'📄 PDF':'📄 PDF'}</button>
+      </div>
+    </div>
+    <div id="modalAttChart" style="overflow-x:auto"></div>`;
+
+  document.getElementById('ov').classList.add('open');
+  renderModalAtt(stuId);
+};
+
+window.renderModalAtt=function(stuId){
+  const stu=DB.students.find(s=>s.id===stuId);if(!stu)return;
+  const month=document.getElementById('modalMonth').value;
+  const year=document.getElementById('modalYear').value;
+  const MONTHS=T[LANG].MONTHS;
+  const NAMAZ=T[LANG].NAMAZ;
+  const key=`${stuId}_${year}_${month}`;
+  if(!DB.attendance)DB.attendance={};
+  const att=DB.attendance[key]||{};
+  const days=Array.from({length:31},(_,i)=>i+1);
+  const isJamaat=k=>k.includes('_farz');
+  const getSymCls=(val,jamaat)=>{
+    if(jamaat){
+      if(val===true)return{sym:'✅',cls:'c-yes'};
+      if(val==='alone')return{sym:'🟡',cls:'c-alone'};
+      if(val===false)return{sym:'❌',cls:'c-no'};
+      return{sym:'◯',cls:'c-empty'};
+    }
+    if(val===true)return{sym:'✅',cls:'c-yes'};
+    if(val===false)return{sym:'❌',cls:'c-no'};
+    return{sym:'◯',cls:'c-empty'};
+  };
+  let th=`<th style="min-width:100px;font-size:11px">${LANG==='ur'?'نماز':'Prayer'}</th>`+
+    days.map(d=>`<th style="font-size:10px;padding:3px 2px"><div>${d}</div><span style="cursor:pointer;font-size:10px" onclick="selectModalDay('${key}',${d})">☑</span></th>`).join('');
+  let rows='';let lastGroup='';
+  NAMAZ.forEach(row=>{
+    const jamaat=isJamaat(row.key);
+    if(row.group&&row.group!==lastGroup){
+      rows+=`<tr><td colspan="${days.length+1}" style="background:var(--green);color:white;font-size:11px;padding:4px 8px;font-weight:700">🕌 ${row.group}</td></tr>`;
+      lastGroup=row.group;
+    } else if(!row.group){lastGroup='';}
+    const cells=days.map(d=>{
+      const val=att[row.key]?att[row.key][d]:undefined;
+      const {sym,cls}=getSymCls(val,jamaat);
+      return`<td><span class="check-cell ${cls}" style="font-size:13px;cursor:pointer" onclick="toggleModalAtt('${key}','${row.key}',${d},${jamaat})">${sym}</span></td>`;
+    }).join('');
+    rows+=`<tr><td style="font-size:11px;padding:3px 6px;background:var(--gp);text-align:${LANG==='en'?'left':'right'};white-space:nowrap">${row.label}</td>${cells}</tr>`;
+  });
+  document.getElementById('modalAttChart').innerHTML=`
+    <div style="background:var(--green);color:white;padding:8px 12px;border-radius:8px 8px 0 0;font-size:13px;font-weight:700;text-align:center">
+      ${stu.name} — ${MONTHS[month]} ${year}
+    </div>
+    <div style="font-size:11px;padding:6px 10px;background:var(--gp);border-bottom:1px solid var(--border)">
+      ✅=${LANG==='ur'?'باجماعت':'Jamaat'} 🟡=${LANG==='ur'?'اکیلے':'Alone'} ❌=${LANG==='ur'?'نہیں':'No'} ◯=${LANG==='ur'?'درج نہیں':'Blank'}
+    </div>
+    <div style="overflow-x:auto;border:1px solid var(--border);border-radius:0 0 8px 8px">
+      <table style="border-collapse:collapse;font-size:11px;min-width:700px">
+        <thead><tr style="background:var(--green);color:white">${th}</tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+};
+
+window.toggleModalAtt=function(key,rowKey,day,jamaat){
+  if(!DB.attendance)DB.attendance={};if(!DB.attendance[key])DB.attendance[key]={};if(!DB.attendance[key][rowKey])DB.attendance[key][rowKey]={};
+  const cur=DB.attendance[key][rowKey][day];
+  let next;
+  if(jamaat){if(cur===undefined)next=true;else if(cur===true)next='alone';else if(cur==='alone')next=false;else next=undefined;}
+  else{if(cur===undefined)next=true;else if(cur===true)next=false;else next=undefined;}
+  if(next===undefined){delete DB.attendance[key][rowKey][day];}else{DB.attendance[key][rowKey][day]=next;}
+  let sym,cls;
+  if(jamaat){sym=next===true?'✅':next==='alone'?'🟡':next===false?'❌':'◯';cls=next===true?'c-yes':next==='alone'?'c-alone':next===false?'c-no':'c-empty';}
+  else{sym=next===true?'✅':next===false?'❌':'◯';cls=next===true?'c-yes':next===false?'c-no':'c-empty';}
+  const span=document.querySelector(`[onclick="toggleModalAtt('${key}','${rowKey}',${day},${jamaat})"]`);
+  if(span){span.textContent=sym;span.className=`check-cell ${cls}`;span.style.fontSize='13px';span.style.cursor='pointer';}
+};
+
+window.selectModalDay=function(key,day){
+  if(!DB.attendance)DB.attendance={};if(!DB.attendance[key])DB.attendance[key]={};
+  const NAMAZ=T[LANG].NAMAZ;
+  NAMAZ.forEach(row=>{
+    if(!DB.attendance[key][row.key])DB.attendance[key][row.key]={};
+    DB.attendance[key][row.key][day]=true;
+    const jamaat=row.key.includes('_farz');
+    const span=document.querySelector(`[onclick="toggleModalAtt('${key}','${row.key}',${day},${jamaat})"]`);
+    if(span){span.textContent='✅';span.className='check-cell c-yes';}
+  });
+};
+
+window.saveModalAtt=async function(stuId){
+  await save();
+  logAct('Admin attendance saved: '+stuId);
+  toast(t('savedToast'));
+};
+
+window.sendAttFromModal=function(stuId){
+  // set attStu and call sendAttWhatsApp
+  const month=document.getElementById('modalMonth').value;
+  const year=document.getElementById('modalYear').value;
+  const stu=DB.students.find(s=>s.id===stuId);if(!stu)return;
+  if(!stu.phone){toast(LANG==='ur'?'نمبر درج نہیں':'No phone','red');return;}
+  // temporarily set values
+  const MONTHS=T[LANG].MONTHS;
+  const NAMAZ=T[LANG].NAMAZ;
+  const key=`${stuId}_${year}_${month}`;
+  const att=(DB.attendance&&DB.attendance[key])||{};
+  const getVal=(k,d)=>att[k]?att[k][d]:undefined;
+  let lines=[];
+  lines.push(LANG==='ur'?'السلام علیکم ورحمۃ اللہ وبرکاتہ!':'Assalamu Alaikum!');
+  lines.push('📚 '+(LANG==='ur'?'دارالعلوم اسلامیہ عربیہ تلوجہ':'Darul Uloom Islamia Arabia Taloja'));
+  lines.push('━━━━━━━━━━━━━━━━');
+  lines.push((LANG==='ur'?'👤 طالب علم: ':'👤 Student: ')+`*${stu.name}*`);
+  lines.push((LANG==='ur'?'📖 درجہ: ':'📖 Class: ')+(stu.className||stu.cat));
+  lines.push((LANG==='ur'?'📅 ماہ: ':'📅 Month: ')+MONTHS[month]+' '+year);
+  lines.push('━━━━━━━━━━━━━━━━');
+  lines.push(LANG==='ur'?'🕌 *نماز حاضری:*':'🕌 *Prayer Attendance:*');
+  lines.push('');
+  let lastGrp='';
+  NAMAZ.forEach(row=>{
+    const jamaat=row.key.includes('_farz');
+    if(row.group&&row.group!==lastGrp){lines.push('');lines.push(`*🕐 ${row.group}*`);lastGrp=row.group;}
+    else if(!row.group){lastGrp='';}
+    let yes=0,alone=0,no=0;
+    for(let d=1;d<=31;d++){const v=getVal(row.key,d);if(v===true)yes++;else if(v==='alone')alone++;else if(v===false)no++;}
+    if(yes+alone+no===0)return;
+    lines.push(`  ${row.label}: ✅${yes}${jamaat?' 🟡'+alone:''} ❌${no}`);
+  });
+  lines.push('');lines.push('━━━━━━━━━━━━━━━━');
+  lines.push(LANG==='ur'?'جزاکم اللہ خیرا 🤲':'JazakAllah Khair 🤲');
+  const msg=lines.join('
+');
+  const phone=stu.phone.replace(/[^0-9]/g,'');
+  window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`,'_blank');
+};
+
+window.exportAttFromModal=function(stuId){
+  const chartHtml=document.getElementById('modalAttChart').innerHTML;
+  const stu=DB.students.find(s=>s.id===stuId);
+  const dir=LANG==='en'?'ltr':'rtl';
+  const w=window.open('','_blank');
+  w.document.write(`<!DOCTYPE html><html dir="${dir}"><head><meta charset="UTF-8">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;700&family=Inter:wght@400;700&display=swap" rel="stylesheet">
+    <style>body{font-family:${LANG==='en'?"'Inter'":'Noto Nastaliq Urdu'},serif;padding:16px;direction:${dir};}
+    .c-yes{color:#1a8c3a;}.c-no{color:#cc2222;}.c-alone{color:#c8952a;}.c-empty{color:#ccc;}
+    .check-cell{font-size:12px;}table{border-collapse:collapse;font-size:10px;}
+    td,th{border:1px solid #ddd;padding:3px 5px;}button{display:none!important;}
+    @media print{button{display:none!important;}}</style></head><body>
+    <h2 style="color:#1a5c2e;text-align:center">🕌 Darul Uloom Islamia Arabia Taloja</h2>
+    ${chartHtml}
+    <button onclick="window.print()" style="display:block!important;margin-top:14px;padding:10px 20px;background:#1a5c2e;color:white;border:none;border-radius:8px;cursor:pointer;">${t('printBtn')}</button>
+    </body></html>`);
+  w.document.close();
+};
+
+// ===== EDIT CLASS =====
+window.editClass=function(id){
+  const cls=DB.classes.find(c=>c.id===id);if(!cls)return;
+  const acc=DB.accounts.find(a=>a.classId===id);
+  document.getElementById('mTitle').textContent=LANG==='ur'?'✏️ درجہ ترمیم کریں':'✏️ Edit Class';
+  document.getElementById('mBody').innerHTML=`
+    <div class="form-row">
+      <div class="fg"><label>${LANG==='ur'?'کیٹیگری':'Category'}</label>
+        <select id="eCat">
+          <option value="حفظ" ${cls.cat==='حفظ'?'selected':''}>حفظ / Hifz</option>
+          <option value="دینیات" ${cls.cat==='دینیات'?'selected':''}>دینیات / Diniyat</option>
+          <option value="عالمیت" ${cls.cat==='عالمیت'?'selected':''}>عالمیت / Aalimiyat</option>
+        </select></div>
+      <div class="fg"><label>${LANG==='ur'?'درجہ کا نام':'Class Name'}</label>
+        <input id="eName" value="${cls.name}" /></div>
+    </div>
+    <div class="form-row">
+      <div class="fg"><label>${LANG==='ur'?'استاد':'Teacher'}</label>
+        <input id="eTeacher" value="${cls.teacher||''}" /></div>
+    </div>
+    <div class="form-row">
+      <div class="fg"><label>${LANG==='ur'?'لاگ ان آئی ڈی':'Login ID'}</label>
+        <input id="eAccId" value="${acc?.id||''}" /></div>
+      <div class="fg"><label>${LANG==='ur'?'پاس ورڈ':'Password'}</label>
+        <input id="eAccPass" value="${acc?.pass||''}" /></div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
+      <button class="btn btn-green" onclick="saveEditClass('${id}')">${LANG==='ur'?'💾 محفوظ کریں':'💾 Save'}</button>
+      <button class="btn btn-red btn-sm" onclick="closeModal()">${LANG==='ur'?'بند کریں':'Close'}</button>
+    </div>`;
+  document.getElementById('modalBox').querySelector('.modal-footer')?.remove();
+  document.getElementById('ov').classList.add('open');
+};
+
+window.saveEditClass=async function(id){
+  const cls=DB.classes.find(c=>c.id===id);if(!cls)return;
+  const acc=DB.accounts.find(a=>a.classId===id);
+  cls.cat=document.getElementById('eCat').value;
+  cls.name=document.getElementById('eName').value.trim();
+  cls.teacher=document.getElementById('eTeacher').value.trim();
+  const newId=document.getElementById('eAccId').value.trim();
+  const newPass=document.getElementById('eAccPass').value.trim();
+  if(acc){
+    // check if ID changed and not duplicate
+    if(newId && newId!==acc.id && DB.accounts.find(a=>a.id===newId)){
+      toast(LANG==='ur'?'یہ آئی ڈی پہلے سے موجود ہے':'ID already exists','red');return;
+    }
+    if(newId)acc.id=newId;
+    if(newPass)acc.pass=newPass;
+    acc.name=cls.teacher||cls.name;
+  }
+  // update className in all students of this class
+  DB.students.forEach(s=>{if(s.classId===id)s.className=cls.name;});
+  logAct(`Class edited: ${cls.name}`);
+  await save();
+  closeModal();
+  renderClasses();
+  toast(LANG==='ur'?'درجہ ترمیم ہو گیا ✅':'Class updated ✅');
+};
+
+// ===== EDIT STUDENT =====
+window.editStudent=function(id){
+  const stu=DB.students.find(s=>s.id===id);if(!stu)return;
+  const cats=['حفظ','دینیات','عالمیت'];
+  const clsOpts=DB.classes.map(c=>`<option value="${c.id}" ${c.id===stu.classId?'selected':''}>${c.cat}—${c.name}</option>`).join('');
+  document.getElementById('mTitle').textContent=LANG==='ur'?'✏️ طالب علم ترمیم کریں':'✏️ Edit Student';
+  document.getElementById('mBody').innerHTML=`
+    <div class="form-row">
+      <div class="fg"><label>${LANG==='ur'?'کیٹیگری':'Category'}</label>
+        <select id="esCat">
+          ${cats.map(c=>`<option value="${c}" ${c===stu.cat?'selected':''}>${c}</option>`).join('')}
+        </select></div>
+      <div class="fg"><label>${LANG==='ur'?'درجہ':'Class'}</label>
+        <select id="esCls">${clsOpts}</select></div>
+    </div>
+    <div class="form-row">
+      <div class="fg"><label>${LANG==='ur'?'نام':'Name'}</label>
+        <input id="esName" value="${stu.name}" /></div>
+    </div>
+    <div class="form-row">
+      <div class="fg"><label>${LANG==='ur'?'واٹس ایپ نمبر':'WhatsApp'}</label>
+        <input id="esPhone" value="${stu.phone||''}" /></div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
+      <button class="btn btn-green" onclick="saveEditStudent('${id}')">${LANG==='ur'?'💾 محفوظ کریں':'💾 Save'}</button>
+      <button class="btn btn-red btn-sm" onclick="closeModal()">${LANG==='ur'?'بند کریں':'Close'}</button>
+    </div>`;
+  document.getElementById('ov').classList.add('open');
+};
+
+window.saveEditStudent=async function(id){
+  const stu=DB.students.find(s=>s.id===id);if(!stu)return;
+  stu.cat=document.getElementById('esCat').value;
+  const classId=document.getElementById('esCls').value;
+  const cls=DB.classes.find(c=>c.id===classId);
+  stu.classId=classId;
+  stu.className=cls?.name||stu.className;
+  stu.name=document.getElementById('esName').value.trim();
+  stu.phone=document.getElementById('esPhone').value.trim();
+  logAct(`Student edited: ${stu.name}`);
+  await save();
+  closeModal();
+  renderStudents();
+  toast(LANG==='ur'?'طالب علم ترمیم ہو گیا ✅':'Student updated ✅');
 };
 
 window.closeModal=function(){document.getElementById('ov').classList.remove('open');};
