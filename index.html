@@ -600,12 +600,13 @@ window.importClasses=async function(input){
   const file=input.files[0];if(!file)return;
   const data=await file.arrayBuffer();const wb=XLSX.read(data);const ws=wb.Sheets[wb.SheetNames[0]];
   const rows=XLSX.utils.sheet_to_json(ws,{defval:''});let added=0;
+  const gv=(r,...keys)=>{for(const k of Object.keys(r)){for(const kw of keys){if(k.includes(kw))return String(r[k]||'').trim();}}return'';};
   for(const r of rows){
-    const cat=String(r['کیٹیگری']||r['Category']||r['cat']||'').trim();
-    const name=String(r['درجہ نام']||r['Class Name']||r['name']||'').trim();
-    const teacher=String(r['استاد']||r['Teacher']||r['teacher']||'').trim();
-    const cid=String(r['آئی ڈی']||r['ID']||r['id']||'').trim();
-    const cpass=String(r['پاسورڈ']||r['Password']||r['pass']||'').trim();
+    const cat=gv(r,'کیٹیگری','Category','cat');
+    const name=gv(r,'درجہ نام','Class Name','name');
+    const teacher=gv(r,'استاد','Teacher','teacher');
+    const cid=gv(r,'آئی ڈی','ID','id','Id');
+    const cpass=gv(r,'پاسورڈ','Password','pass','Pass');
     if(!name||!cid||!cpass)continue;
     if(DB.classes.find(c=>c.cat===cat&&c.name===name))continue;
     if(DB.accounts.find(a=>a.id===cid))continue;
@@ -675,11 +676,12 @@ window.importStudents=async function(input){
   const file=input.files[0];if(!file)return;
   const data=await file.arrayBuffer();const wb=XLSX.read(data);const ws=wb.Sheets[wb.SheetNames[0]];
   const rows=XLSX.utils.sheet_to_json(ws,{defval:''});let added=0;
+  const gv=(r,...keys)=>{for(const k of Object.keys(r)){for(const kw of keys){if(k.includes(kw))return String(r[k]||'').trim();}}return'';};
   for(const r of rows){
-    const name=String(r['نام']||r['Name']||r['name']||'').trim();
-    const phone=String(r['واٹس ایپ']||r['WhatsApp']||r['phone']||'').trim();
-    const clsName=String(r['درجہ']||r['Class']||r['class']||'').trim();
-    const cat=String(r['کیٹیگری']||r['Category']||r['cat']||'').trim();
+    const name=gv(r,'نام','Name','name');
+    const phone=gv(r,'واٹس ایپ','WhatsApp','phone','Phone');
+    const clsName=gv(r,'درجہ','Class','class');
+    const cat=gv(r,'کیٹیگری','Category','cat');
     if(!name)continue;
     const cls=DB.classes.find(c=>c.name===clsName||(c.cat===cat&&c.name===clsName));
     DB.students.push({id:'s'+Date.now()+'_'+added,cat:cat||cls?.cat||'',classId:cls?.id||'',className:cls?.name||clsName,name,phone});added++;
