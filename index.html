@@ -293,6 +293,7 @@ tbody td{padding:7px 10px;vertical-align:middle;}
           <div class="fg"><label id="lAttYear">سال</label><select id="attYear" onchange="loadAttendance()"></select></div>
         </div>
         <button class="btn btn-gold btn-sm" onclick="exportAttPDF()" id="btnAttPDF">📄 PDF Export</button>
+        <button class="btn btn-green btn-sm" onclick="sendAttWhatsApp()" id="btnAttWA">📱 WhatsApp رپورٹ</button>
       </div>
       <div id="attChart"></div>
     </div>
@@ -944,10 +945,11 @@ function renderMyStudents(){
   const cls=DB.classes.find(c=>c.id===CU.classId);
   document.getElementById('myStudTable').innerHTML=stus.length
     ?`<div style="margin-bottom:8px;font-size:13px;color:var(--subtext)">${LANG==='ur'?'درجہ':'Class'}: <b>${cls?cls.cat+'—'+cls.name:'—'}</b> | ${LANG==='ur'?'کل':'Total'}: <b>${stus.length}</b></div>`+
-      `<table><thead><tr><th>#</th><th>${t('thName')}</th><th>${t('thPhone')}</th><th>${LANG==='ur'?'حاضری':'Attendance'}</th><th>${t('thPDF')}</th></tr></thead>
+      `<table><thead><tr><th>#</th><th>${t('thName')}</th><th>${t('thPhone')}</th><th>${LANG==='ur'?'حاضری':'Attendance'}</th><th>${t('thPDF')}</th><th>WA</th></tr></thead>
       <tbody>${stus.map((s,i)=>`<tr><td>${i+1}</td><td>${s.name}</td><td>${s.phone||'—'}</td>
       <td><button class="btn btn-green btn-xs" onclick="goToAtt('${s.id}')">📅</button></td>
-      <td><button class="btn btn-blue btn-xs" onclick="exportStudentPDF('${s.id}')">📄</button></td></tr>`).join('')}</tbody></table>`
+      <td><button class="btn btn-blue btn-xs" onclick="exportStudentPDF('${s.id}')">📄</button></td>
+      <td>${s.phone?`<button class="btn btn-xs" style="background:#25d366;color:white" onclick="sendStudentWA('${s.id}')">📱 WA</button>`:'—'}</td></tr>`).join('')}</tbody></table>`
     :`<div class="empty">${t('noStudent')}</div>`;
 }
 
@@ -978,6 +980,135 @@ window.goToAtt=function(stuId){
   showTab('attendance',null);
   setTimeout(()=>{document.getElementById('attStu').value=stuId;loadAttendance();
     document.querySelectorAll('.tab-btn').forEach(b=>{b.classList.toggle('active',b.textContent.includes(LANG==='ur'?'نماز':'Prayer'));});},100);
+};
+
+window.sendAttWhatsApp=function(){
+  const stuId=document.getElementById('attStu').value;
+  if(!stuId){toast(t('selectFirst'),'red');return;}
+  const stu=DB.students.find(s=>s.id===stuId);
+  if(!stu){return;}
+  if(!stu.phone){toast(LANG==='ur'?'اس طالب علم کا نمبر درج نہیں':'No phone number','red');return;}
+  const month=document.getElementById('attMonth').value;
+  const year=document.getElementById('attYear').value;
+  const MONTHS=T[LANG].MONTHS;
+  const key=`${stuId}_${year}_${month}`;
+  const att=(DB.attendance&&DB.attendance[key])||{};
+  const NAMAZ=T[LANG].NAMAZ;
+
+  // Group namaz by prayer time
+  const groups={};
+  NAMAZ.forEach(row=>{
+    if(!groups[row.group||row.label])groups[row.group||row.label]=[];
+    groups[row.group||row.label].push(row);
+  });
+
+  // Count farz jamaat stats per group
+  const farzKeys={
+    'فجر':'fajr_farz','ظہر':'zuhr_farz','عصر':'asr_farz','مغرب':'maghrib_farz','عشاء':'isha_farz',
+    'Fajr':'fajr_farz','Zuhr':'zuhr_farz','Asr':'asr_farz','Maghrib':'maghrib_farz','Isha':'isha_farz'
+  };
+
+  // count days in month
+  const daysInMonth=31;
+  let lines=[];
+
+  // header
+  if(LANG==='ur'){
+    lines.push(`السلام علیکم ورحمۃ اللہ وبرکاتہ!`);
+    lines.push(`📚 دارالعلوم اسلامیہ عربیہ تلوجہ`);
+    lines.push(`━━━━━━━━━━━━━━━━`);
+    lines.push(`👤 طالب علم: *${stu.name}*`);
+    lines.push(`📖 درجہ: ${stu.className||stu.cat}`);
+    lines.push(`📅 ماہ: ${MONTHS[month]} ${year}`);
+    lines.push(`━━━━━━━━━━━━━━━━`);
+    lines.push(`🕌 *نماز باجماعت رپورٹ:*`);
+    lines.push(``);
+  } else {
+    lines.push(`Assalamu Alaikum!`);
+    lines.push(`📚 Darul Uloom Islamia Arabia Taloja`);
+    lines.push(`━━━━━━━━━━━━━━━━`);
+    lines.push(`👤 Student: *${stu.name}*`);
+    lines.push(`📖 Class: ${stu.className||stu.cat}`);
+    lines.push(`📅 Month: ${MONTHS[month]} ${year}`);
+    lines.push(`━━━━━━━━━━━━━━━━`);
+    lines.push(`🕌 *Prayer Attendance Report:*`);
+    lines.push(``);
+  }
+
+  // farz jamaat stats
+  const farzGroups=LANG==='ur'
+    ?[{g:'فجر',k:'fajr_farz'},{g:'ظہر',k:'zuhr_farz'},{g:'عصر',k:'asr_farz'},{g:'مغرب',k:'maghrib_farz'},{g:'عشاء',k:'isha_farz'}]
+    :[{g:'Fajr',k:'fajr_farz'},{g:'Zuhr',k:'zuhr_farz'},{g:'Asr',k:'asr_farz'},{g:'Maghrib',k:'maghrib_farz'},{g:'Isha',k:'isha_farz'}];
+
+  let totalJamaat=0,totalAlone=0,totalMissed=0,totalDays=0;
+
+  farzGroups.forEach(({g,k})=>{
+    const rec=att[k]||{};
+    let jamaat=0,alone=0,missed=0,blank=0;
+    for(let d=1;d<=31;d++){
+      const v=rec[d];
+      if(v===true)jamaat++;
+      else if(v==='alone')alone++;
+      else if(v===false)missed++;
+      else blank++;
+    }
+    const filled=jamaat+alone+missed;
+    if(filled===0)return;
+    totalJamaat+=jamaat;totalAlone+=alone;totalMissed+=missed;totalDays+=filled;
+    const bar='✅'.repeat(Math.min(jamaat,10))+'🟡'.repeat(Math.min(alone,5))+'❌'.repeat(Math.min(missed,5));
+    if(LANG==='ur'){
+      lines.push(`*${g}:*`);
+      lines.push(`  ✅ باجماعت: ${jamaat} | 🟡 اکیلے: ${alone} | ❌ غیر حاضر: ${missed}`);
+    } else {
+      lines.push(`*${g}:*`);
+      lines.push(`  ✅ Jamaat: ${jamaat} | 🟡 Alone: ${alone} | ❌ Missed: ${missed}`);
+    }
+  });
+
+  lines.push(``);
+  lines.push(`━━━━━━━━━━━━━━━━`);
+  if(LANG==='ur'){
+    lines.push(`📊 *مجموعی خلاصہ:*`);
+    lines.push(`✅ باجماعت: ${totalJamaat}`);
+    lines.push(`🟡 اکیلے: ${totalAlone}`);
+    lines.push(`❌ غیر حاضر: ${totalMissed}`);
+    lines.push(``);
+    lines.push(`گھر پر نماز کی ترغیب دیتے رہیں۔`);
+    lines.push(`جزاکم اللہ خیرا 🤲`);
+    lines.push(`دارالعلوم اسلامیہ عربیہ تلوجہ`);
+  } else {
+    lines.push(`📊 *Summary:*`);
+    lines.push(`✅ With Jamaat: ${totalJamaat}`);
+    lines.push(`🟡 Alone: ${totalAlone}`);
+    lines.push(`❌ Missed: ${totalMissed}`);
+    lines.push(``);
+    lines.push(`Please encourage prayers at home.`);
+    lines.push(`JazakAllah Khair 🤲`);
+    lines.push(`Darul Uloom Islamia Arabia Taloja`);
+  }
+
+  const msg=lines.join('\n');
+  const phone=stu.phone.replace(/\D/g,'');
+  const url=`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
+  window.open(url,'_blank');
+};
+
+// Also add WA button in my students list per student
+window.sendStudentWA=function(stuId){
+  document.getElementById('attStu').value=stuId;
+  const month=document.getElementById('attMonth')?.value;
+  const year=document.getElementById('attYear')?.value;
+  if(!month||!year){
+    // go to attendance tab first
+    showTab('attendance',null);
+    setTimeout(()=>{
+      document.getElementById('attStu').value=stuId;
+      loadAttendance();
+      setTimeout(()=>sendAttWhatsApp(),300);
+    },200);
+    return;
+  }
+  sendAttWhatsApp();
 };
 
 window.closeModal=function(){document.getElementById('ov').classList.remove('open');};
