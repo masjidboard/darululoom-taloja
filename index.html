@@ -294,6 +294,25 @@ tbody td{padding:7px 10px;vertical-align:middle;}
           <button class="btn btn-blue" onclick="generateAllCredentials()" id="btnGenCreds">🔑 سب کے لاگ ان بنائیں</button>
         </div>
       </div>
+      <div class="card">
+        <div class="card-title">🔄 <span id="ttBulkMove">پورا درجہ منتقل کریں</span></div>
+        <div class="form-row">
+          <div class="fg"><label id="lBmFromCat">کس کیٹیگری سے</label>
+            <select id="bmFromCat" onchange="fillClassDrop('bmFromCls','bmFromCat')">
+              <option value="حفظ">حفظ</option><option value="دینیات">دینیات</option><option value="عالمیت">عالمیت</option></select></div>
+          <div class="fg"><label id="lBmFromCls">کس درجہ سے</label><select id="bmFromCls"></select></div>
+        </div>
+        <div class="form-row">
+          <div class="fg"><label id="lBmToCat">کس کیٹیگری میں</label>
+            <select id="bmToCat" onchange="fillClassDrop('bmToCls','bmToCat')">
+              <option value="حفظ">حفظ</option><option value="دینیات">دینیات</option><option value="عالمیت">عالمیت</option></select></div>
+          <div class="fg"><label id="lBmToCls">کس درجہ میں</label><select id="bmToCls"></select></div>
+        </div>
+        <div class="btn-wrap">
+          <button class="btn btn-green" onclick="bulkMoveClass()" id="btnBulkMove">🔄 سب طلبہ کو منتقل کریں</button>
+        </div>
+        <div style="font-size:11px;color:var(--subtext);margin-top:6px" id="bmHint">منتخب درجہ کے تمام طلبہ نئے درجہ میں منتقل ہو جائیں گے۔</div>
+      </div>
       <div class="card" style="padding:10px 14px">
         <div class="form-row" style="margin:0;align-items:flex-end">
           <div class="fg"><label id="lFCat">کیٹیگری</label>
@@ -408,6 +427,9 @@ const T = {
     lAttStu:'طالب علم', lAttMonth:'مہینہ', lAttYear:'سال',
     btnAddCls:'➕ شامل کریں', btnImportCls:'📥 Excel Import', btnExportCls:'📤 Excel Export', btnTplCls:'📋 Template',
     btnAddStu:'➕ شامل کریں', btnImportStu:'📥 Excel Import', btnExportStu:'📤 Excel Export', btnTplStu:'📋 Template',
+    ttBulkMove:'پورا درجہ منتقل کریں', lBmFromCat:'کس کیٹیگری سے', lBmFromCls:'کس درجہ سے',
+    lBmToCat:'کس کیٹیگری میں', lBmToCls:'کس درجہ میں', btnBulkMove:'🔄 سب طلبہ کو منتقل کریں',
+    bmHint:'منتخب درجہ کے تمام طلبہ نئے درجہ میں منتقل ہو جائیں گے۔',
     btnWAPreview:'👁️ پیش نظارہ', btnWAcsv:'📥 CSV', btnAttPDF:'📄 PDF Export',
     btnMyStuPDF:'📄 PDF', btnMyStuXls:'📤 Excel', btnClose:'بند کریں',
     totalStudents:'کل طلبہ', totalClasses:'کل درجات',
@@ -454,6 +476,9 @@ const T = {
     lAttStu:'Student', lAttMonth:'Month', lAttYear:'Year',
     btnAddCls:'➕ Add', btnImportCls:'📥 Excel Import', btnExportCls:'📤 Excel Export', btnTplCls:'📋 Template',
     btnAddStu:'➕ Add', btnImportStu:'📥 Excel Import', btnExportStu:'📤 Excel Export', btnTplStu:'📋 Template',
+    ttBulkMove:'Move Entire Class', lBmFromCat:'From Category', lBmFromCls:'From Class',
+    lBmToCat:'To Category', lBmToCls:'To Class', btnBulkMove:'🔄 Move All Students',
+    bmHint:'All students of the selected class will be moved to the new class.',
     btnWAPreview:'👁️ Preview', btnWAcsv:'📥 CSV', btnAttPDF:'📄 PDF Export',
     btnMyStuPDF:'📄 PDF', btnMyStuXls:'📤 Excel', btnClose:'Close',
     totalStudents:'Total Students', totalClasses:'Total Classes',
@@ -526,7 +551,8 @@ function applyTranslations(){
     'lCat','lClsName','lTeacher','lClsId','lClsPass','lSCat','lSCls','lSName','lSPhone',
     'lFCat','lFCls','lSearch','lWCat','lWCls','lWMsg','lAttStu','lAttMonth','lAttYear',
     'btnAddCls','btnImportCls','btnExportCls','btnTplCls','btnAddStu','btnImportStu','btnExportStu','btnTplStu',
-    'btnWAPreview','btnWAcsv','btnAttPDF','btnMyStuPDF','btnMyStuXls','btnClose'];
+    'btnWAPreview','btnWAcsv','btnAttPDF','btnMyStuPDF','btnMyStuXls','btnClose',
+    'ttBulkMove','lBmFromCat','lBmFromCls','lBmToCat','lBmToCls','btnBulkMove','bmHint'];
   ids.forEach(id=>{const el=document.getElementById(id);if(el&&t[id])el.textContent=t[id];});
   const loginBtn=document.getElementById('loginBtn');if(loginBtn)loginBtn.textContent=t.loginBtn;
   const lid=document.getElementById('lid');if(lid)lid.placeholder=LANG==='ur'?'آئی ڈی':'ID';
@@ -576,7 +602,31 @@ function startRealtime(){
   },()=>setSyncDot('offline'));
 }
 
-async function save(){localStorage.setItem('du_db4',JSON.stringify(DB));await saveToFirebase();}
+// Keep only the most recent ~12 months of attendance per student (rolling window).
+// Older months are deleted automatically so Firebase storage stays small.
+function pruneAttendance(keepMonths=12){
+  if(!DB.attendance)return false;
+  const byStu={};
+  Object.keys(DB.attendance).forEach(k=>{
+    const parts=k.split('_');
+    if(parts.length<3)return;
+    const month=parseInt(parts[parts.length-1]);
+    const year=parseInt(parts[parts.length-2]);
+    const stuId=parts.slice(0,parts.length-2).join('_');
+    if(isNaN(month)||isNaN(year))return;
+    const score=year*12+(month%12); // chronological score (month index 0-23 folds to 0-11)
+    (byStu[stuId]=byStu[stuId]||[]).push({k,score});
+  });
+  let removed=0;
+  Object.values(byStu).forEach(arr=>{
+    const maxScore=Math.max(...arr.map(o=>o.score));
+    const cutoff=maxScore-(keepMonths-1);
+    arr.forEach(o=>{if(o.score<cutoff){delete DB.attendance[o.k];removed++;}});
+  });
+  return removed>0;
+}
+
+async function save(){pruneAttendance(12);localStorage.setItem('du_db4',JSON.stringify(DB));await saveToFirebase();}
 function logAct(msg){if(!DB.log)DB.log=[];DB.log.push({t:new Date().toLocaleString(),m:msg});if(DB.log.length>60)DB.log=DB.log.slice(-60);}
 function toast(m,c='green'){const el=document.getElementById('toast');el.textContent=m;el.style.background=c==='red'?'#b52a2a':'#1a5c2e';el.style.display='block';clearTimeout(el._t);el._t=setTimeout(()=>el.style.display='none',2800);}
 
@@ -613,7 +663,7 @@ window.showTab=function(name,btn){
   if(btn)btn.classList.add('active');
   if(name==='dashboard')renderDashboard();
   if(name==='classes')renderClasses();
-  if(name==='students'){fillClassDrop('sCls','sCat');renderStudents();}
+  if(name==='students'){fillClassDrop('sCls','sCat');fillClassDrop('bmFromCls','bmFromCat');fillClassDrop('bmToCls','bmToCat');renderStudents();}
   if(name==='accounts')renderAccounts();
   if(name==='attendance')initAttendance();
   if(name==='mystudents')renderMyStudents();
@@ -777,13 +827,14 @@ function renderStudents(){
   if(search)stus=stus.filter(s=>s.name.toLowerCase().includes(search));
   const cc={حفظ:'bg',دینیات:'bb',عالمیت:'br'};
   document.getElementById('studTable').innerHTML=stus.length
-    ?`<table><thead><tr><th>#</th><th>${t('thName')}</th><th>${t('thPhone')}</th><th>${t('thCat')}</th><th>${t('thClass')}</th><th>${t('thId')} / ${t('thPass')}</th><th>${t('thPDF')}</th><th>WA</th><th>${LANG==='ur'?'چارٹ':'Chart'}</th><th>${LANG==='ur'?'ترمیم':'Edit'}</th><th>${t('thDelete')}</th></tr></thead>
+    ?`<table><thead><tr><th>#</th><th>${t('thName')}</th><th>${t('thPhone')}</th><th>${t('thCat')}</th><th>${t('thClass')}</th><th>${t('thId')} / ${t('thPass')}</th><th>${t('thPDF')}</th><th>WA</th><th>${LANG==='ur'?'چارٹ':'Chart'}</th><th>${LANG==='ur'?'منتقل':'Move'}</th><th>${LANG==='ur'?'ترمیم':'Edit'}</th><th>${t('thDelete')}</th></tr></thead>
     <tbody>${stus.map((s,i)=>`<tr><td>${i+1}</td><td>${s.name}</td><td>${s.phone||'—'}</td>
     <td><span class="badge ${cc[s.cat]||'bo'}">${s.cat}</span></td><td>${s.className||'—'}</td>
     <td><div style="font-size:10px;background:var(--gp);padding:2px 5px;border-radius:4px;font-family:monospace">${s.stuId||'—'}</div><div style="font-size:9px;color:var(--subtext)">${s.stuPass||'—'}</div></td>
     <td><button class="btn btn-blue btn-xs" onclick="exportStudentPDF('${s.id}')">📄</button></td>
     <td>${s.phone?`<button class="btn btn-xs" style="background:#25d366;color:white" onclick="openAdminAtt('${s.id}')">📱 WA</button>`:'—'}</td>
     <td><button class="btn btn-xs" style="background:#1a3e6b;color:white" onclick="openAdminAtt('${s.id}')">📅 چارٹ</button></td>
+    <td><button class="btn btn-xs" style="background:#7a4eb0;color:white" onclick="transferStudent('${s.id}')">🔄</button></td>
     <td><button class="btn btn-gold btn-xs" onclick="editStudent('${s.id}')">✏️</button></td>
     <td><button class="btn btn-red btn-xs" onclick="deleteStudent('${s.id}')">✕</button></td></tr>`).join('')}</tbody></table>`
     :`<div class="empty">${t('noStudent')}</div>`;
@@ -1473,6 +1524,71 @@ window.saveEditStudent=async function(id){
   toast(LANG==='ur'?'طالب علم ترمیم ہو گیا ✅':'Student updated ✅');
 };
 
+// ===== TRANSFER / MOVE STUDENT BETWEEN CATEGORIES =====
+window.transferStudent=function(id){
+  const stu=DB.students.find(s=>s.id===id);if(!stu)return;
+  const cats=['حفظ','دینیات','عالمیت'];
+  document.getElementById('mTitle').textContent=LANG==='ur'?'🔄 درجہ منتقل کریں':'🔄 Transfer Student';
+  document.getElementById('mBody').innerHTML=`
+    <div style="font-size:13px;margin-bottom:12px;color:var(--subtext)">
+      ${LANG==='ur'?'طالب علم':'Student'}: <b style="color:var(--text)">${stu.name}</b><br>
+      ${LANG==='ur'?'موجودہ درجہ':'Current'}: <b style="color:var(--text)">${stu.cat} — ${stu.className||'—'}</b>
+    </div>
+    <div class="form-row">
+      <div class="fg"><label>${LANG==='ur'?'نئی کیٹیگری':'New Category'}</label>
+        <select id="tsCat" onchange="fillClassDrop('tsCls','tsCat')">
+          ${cats.map(c=>`<option value="${c}" ${c===stu.cat?'selected':''}>${c}</option>`).join('')}
+        </select></div>
+      <div class="fg"><label>${LANG==='ur'?'نیا درجہ':'New Class'}</label>
+        <select id="tsCls"></select></div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
+      <button class="btn btn-green" onclick="saveTransferStudent('${id}')">${LANG==='ur'?'✅ منتقل کریں':'✅ Transfer'}</button>
+      <button class="btn btn-red btn-sm" onclick="closeModal()">${LANG==='ur'?'بند کریں':'Close'}</button>
+    </div>`;
+  document.getElementById('ov').classList.add('open');
+  fillClassDrop('tsCls','tsCat');
+  const tc=document.getElementById('tsCls');if(tc&&stu.classId)tc.value=stu.classId;
+};
+
+window.saveTransferStudent=async function(id){
+  const stu=DB.students.find(s=>s.id===id);if(!stu)return;
+  const newCat=document.getElementById('tsCat').value;
+  const newClassId=document.getElementById('tsCls').value;
+  const cls=DB.classes.find(c=>c.id===newClassId);
+  const oldInfo=`${stu.cat}/${stu.className||'—'}`;
+  stu.cat=newCat;
+  stu.classId=newClassId||'';
+  stu.className=cls?cls.name:'';
+  logAct(`Transferred ${stu.name}: ${oldInfo} → ${newCat}/${stu.className||'—'}`);
+  await save();
+  closeModal();
+  renderStudents();
+  toast(LANG==='ur'?'طالب علم منتقل ہو گیا ✅':'Student transferred ✅');
+};
+
+// ===== BULK MOVE: transfer ALL students of one class to another =====
+window.bulkMoveClass=async function(){
+  const fromClsId=document.getElementById('bmFromCls').value;
+  const toClsId=document.getElementById('bmToCls').value;
+  const toCat=document.getElementById('bmToCat').value;
+  if(!fromClsId){toast(LANG==='ur'?'پہلے "کس درجہ سے" منتخب کریں':'Select a source class','red');return;}
+  if(!toClsId){toast(LANG==='ur'?'پہلے "کس درجہ میں" منتخب کریں':'Select a target class','red');return;}
+  if(fromClsId===toClsId){toast(LANG==='ur'?'دونوں درجے ایک جیسے ہیں':'Source and target are the same','red');return;}
+  const toCls=DB.classes.find(c=>c.id===toClsId);if(!toCls)return;
+  const movers=DB.students.filter(s=>s.classId===fromClsId);
+  if(!movers.length){toast(LANG==='ur'?'اس درجہ میں کوئی طالب علم نہیں':'No students in that class','red');return;}
+  const msg=LANG==='ur'
+    ?`${movers.length} طلبہ کو "${toCat} — ${toCls.name}" میں منتقل کریں؟`
+    :`Move ${movers.length} students to "${toCat} — ${toCls.name}"?`;
+  if(!confirm(msg))return;
+  movers.forEach(s=>{s.cat=toCat;s.classId=toClsId;s.className=toCls.name;});
+  logAct(`Bulk moved ${movers.length} students → ${toCat}/${toCls.name}`);
+  await save();
+  renderStudents();
+  toast(LANG==='ur'?`${movers.length} طلبہ منتقل ہو گئے ✅`:`${movers.length} students moved ✅`);
+};
+
 // ===== STUDENT VIEW =====
 function initStudentView(){
   const stu=DB.students.find(s=>s.stuId===CU.id||s.id===CU.studentId);
@@ -1543,6 +1659,7 @@ async function init(){
   // Apply saved lang/theme
   setLang(LANG);setTheme(THEME==='dark');
   await loadFromFirebase();
+  if(pruneAttendance(12)){saveToFirebase();} // clean old months from cloud once
   document.getElementById('loadingPage').style.display='none';
   document.getElementById('loginPage').style.display='flex';
   applyTranslations();
