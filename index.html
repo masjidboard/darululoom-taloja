@@ -500,7 +500,14 @@ async function saveToFirebase(){
 
 function startRealtime(){
   onSnapshot(doc(db,'darululoom','main'),(snap)=>{
-    if(snap.exists()&&CU){DB=snap.data();if(!DB.attendance)DB.attendance={};setSyncDot('online');const ab=document.querySelector('.tab-btn.active');if(ab)ab.click();}
+    if(snap.exists()&&CU){
+      DB=snap.data();if(!DB.attendance)DB.attendance={};setSyncDot('online');
+      // Don't refresh if user is on attendance tab (would close the chart)
+      const ab=document.querySelector('.tab-btn.active');
+      if(ab && !ab.textContent.includes('نماز') && !ab.textContent.includes('Prayer')){
+        ab.click();
+      }
+    }
   },()=>setSyncDot('offline'));
 }
 
