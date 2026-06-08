@@ -864,13 +864,25 @@ window.importStudents=async function(input){
 };
 
 window.generateAllCredentials=async function(){
-  let count=0;
-  DB.students.forEach(s=>{if(ensureStudentLogin(s))count++;});
-  if(count===0){toast(LANG==='ur'?'سب کے لاگ ان پہلے سے موجود ہیں ✅':'All students already have logins ✅');return;}
-  logAct(`Generated logins for ${count} students`);
+  let created=0,fixed=0;
+  DB.students.forEach(s=>{
+    if(ensureStudentLogin(s)){created++;return;}
+    // Convert any old/non-standard password to the clean category code
+    if(!isCleanCode(s.stuPass)){
+      s.stuPass=makeStuCode(s.cat);
+      const acc=DB.accounts&&DB.accounts.find(a=>a.studentId===s.id||a.id===s.stuId);
+      if(acc)acc.pass=s.stuPass;
+      fixed++;
+    }
+  });
+  if(created+fixed===0){toast(LANG==='ur'?'سب کے لاگ ان پہلے سے موجود ہیں ✅':'All logins already exist ✅');return;}
+  logAct(`Logins: ${created} created, ${fixed} converted to code`);
   await save();
   renderStudents();
-  toast(LANG==='ur'?`${count} طلبہ کے لاگ ان بن گئے ✅`:`${count} student logins created ✅`);
+  const m=LANG==='ur'
+    ?`${created} نئے بنے، ${fixed} کوڈ میں تبدیل ✅`
+    :`${created} created, ${fixed} converted ✅`;
+  toast(m);
 };
 
 window.exportStudentsExcel=function(){
@@ -1124,13 +1136,26 @@ window.goToAtt=function(stuId){
     document.querySelectorAll('.tab-btn').forEach(b=>{b.classList.toggle('active',b.textContent.includes(LANG==='ur'?'نماز':'Prayer'));});},100);
 };
 
-// Ensure a student has login credentials (auto-generate + create account if missing)
+// Ensure a student has login credentials (auto-generate + create account if missing).
+// Password = clean short category code, e.g. hifz101, dini102, alim103 — easy to type for everyone.
+const CAT_PREFIX={'حفظ':'hifz','دینیات':'dini','عالمیت':'alim'};
+function isAscii(s){return /^[\x20-\x7E]*$/.test(s||'');}
+function isCleanCode(p){return /^(hifz|dini|alim|stu)\d+$/.test(p||'');}
+function makeStuCode(cat){
+  const prefix=CAT_PREFIX[cat]||'stu';
+  let max=100; // first code becomes prefix+101
+  DB.students.forEach(s=>{
+    const m=String(s.stuPass||'').match(new RegExp('^'+prefix+'(\\d+)$'));
+    if(m){const n=parseInt(m[1]);if(n>max)max=n;}
+  });
+  return prefix+(max+1);
+}
+
 function ensureStudentLogin(stu){
   if(stu.stuId&&stu.stuPass)return false;
   let stuNum;
   do{stuNum='STU'+Math.floor(1000+Math.random()*9000);}while(DB.accounts&&DB.accounts.find(a=>a.id===stuNum));
-  const base=(stu.name||'student').split(' ')[0].replace(/[^a-zA-Z\u0600-\u06FF]/g,'')||'stu';
-  const stuPass=base+Math.floor(100+Math.random()*900);
+  const stuPass=makeStuCode(stu.cat);
   stu.stuId=stuNum;stu.stuPass=stuPass;
   if(!DB.accounts)DB.accounts=[];
   if(!DB.accounts.find(a=>a.studentId===stu.id)){
