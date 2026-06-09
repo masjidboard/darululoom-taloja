@@ -846,14 +846,23 @@ window.deleteStudent=async function(id){
 let _stuPage=0;const STU_PER_PAGE=20;
 function renderStudents(keepPage=false){
   if(!keepPage)_stuPage=0;
-  const cat=document.getElementById('fCat')?.value||'',classId=document.getElementById('fCls')?.value||'';
+  const cat=document.getElementById('fCat')?.value||'';
   const search=(document.getElementById('fSearch')?.value||'').toLowerCase();
   const fc=document.getElementById('fCls');
-  if(fc){const prev=fc.value;const cls=cat?DB.classes.filter(c=>c.cat===cat):DB.classes;
-    fc.innerHTML=`<option value="">— ${LANG==='ur'?'سب':'All'} —</option>`+cls.map(c=>`<option value="${c.id}" ${c.id===prev?'selected':''}>${c.cat}—${c.name}</option>`).join('');}
+  // Rebuild class dropdown filtered by category, preserving selection
+  if(fc){
+    const prev=fc.value;
+    const cls=cat?DB.classes.filter(c=>c.cat===cat):DB.classes;
+    fc.innerHTML=`<option value="">— ${LANG==='ur'?'سب':'All'} —</option>`+cls.map(c=>`<option value="${c.id}" ${c.id===prev?'selected':''}>${c.cat}—${c.name}</option>`).join('');
+    // If prev belonged to a different category, clear it
+    if(prev && !cls.find(c=>c.id===prev)) fc.value='';
+  }
+  // Read classId AFTER rebuilding dropdown
+  const classId=fc?fc.value:'';
   let stus=DB.students;
-  if(cat)stus=stus.filter(s=>s.cat===cat);if(classId)stus=stus.filter(s=>s.classId===classId);
-  if(search)stus=stus.filter(s=>s.name.toLowerCase().includes(search));
+  if(cat)stus=stus.filter(s=>s.cat===cat);
+  if(classId)stus=stus.filter(s=>s.classId===classId);
+  if(search)stus=stus.filter(s=>s.name.toLowerCase().includes(search)||s.stuId?.toLowerCase().includes(search));
   const cc={حفظ:'bg',دینیات:'bb',عالمیت:'br'};
   const total=stus.length;
   const totalPages=Math.max(1,Math.ceil(total/STU_PER_PAGE));
@@ -987,10 +996,12 @@ function renderAccounts(keepPage=false){
   document.getElementById('accTable').innerHTML=mkPager()+`<table>
     <thead><tr><th>#</th><th>${t('thName')}</th><th>${t('thId')}</th><th>${t('thPass')}</th><th>${t('thRole')}</th><th>${t('thClass')}</th><th>${t('thAction')}</th></tr></thead>
     <tbody>${pageAccs.map((a,i)=>{const cls=DB.classes.find(c=>c.id===a.classId);
+      const stu=a.role==='student'?DB.students.find(s=>s.id===a.studentId||s.stuId===a.id):null;
+      const clsLabel=a.role==='student'?(stu?(stu.cat+'—'+(stu.className||'—')):(LANG==='ur'?'—':'—')):(cls?cls.cat+'—'+cls.name:(a.role==='admin'?(LANG==='ur'?'سب':'All'):'—'));
       return`<tr><td>${start+i+1}</td><td>${a.name}</td><td style="font-family:monospace;direction:ltr;text-align:left;font-size:11px">${a.id}</td>
       <td style="font-family:monospace;font-size:11px">${a.pass}</td>
       <td><span class="badge ${rc[a.role]||'bg'}">${a.role==='admin'?t('admin'):a.role==='student'?(LANG==='ur'?'طالب علم':'Student'):t('teacher')}</span></td>
-      <td>${cls?cls.cat+'—'+cls.name:LANG==='ur'?'سب':'All'}</td>
+      <td>${clsLabel}</td>
       <td>${a.id!=='darululoom'?`<button class="btn btn-red btn-xs" onclick="deleteAccount('${a.id}')">✕</button>`:'—'}</td></tr>`;}).join('')}</tbody></table>`+mkPager();
 }
 window._accNav=function(dir){_accPage+=dir;renderAccounts(true);document.getElementById('accTable').scrollIntoView({behavior:'smooth',block:'start'});};
