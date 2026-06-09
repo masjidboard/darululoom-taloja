@@ -316,10 +316,10 @@ tbody td{padding:7px 10px;vertical-align:middle;}
       <div class="card" style="padding:10px 14px">
         <div class="form-row" style="margin:0;align-items:flex-end">
           <div class="fg"><label id="lFCat">کیٹیگری</label>
-            <select id="fCat" onchange="setTimeout(()=>renderStudents(),0)"><option value="">— سب —</option>
+            <select id="fCat" onchange="renderStudents(false,this.value)"><option value="">— سب —</option>
               <option value="حفظ">حفظ</option><option value="دینیات">دینیات</option><option value="عالمیت">عالمیت</option></select></div>
-          <div class="fg"><label id="lFCls">درجہ</label><select id="fCls" onchange="setTimeout(()=>renderStudents(true),0)"><option value="">— سب —</option></select></div>
-          <div class="fg"><label id="lSearch">تلاش</label><input id="fSearch" oninput="setTimeout(()=>renderStudents(),0)" /></div>
+          <div class="fg"><label id="lFCls">درجہ</label><select id="fCls" onchange="renderStudents(false)"><option value="">— سب —</option></select></div>
+          <div class="fg"><label id="lSearch">تلاش</label><input id="fSearch" oninput="renderStudents(false)" /></div>
         </div>
       </div>
       <div class="card"><div class="card-title" id="ttStuList">👨‍🎓 طلبہ</div><div id="studTable"></div></div>
@@ -844,11 +844,14 @@ window.deleteStudent=async function(id){
 };
 
 let _stuPage=0;const STU_PER_PAGE=20;
-function renderStudents(keepPage=false){
+function renderStudents(keepPage=false,catOverride=null){
   if(!keepPage)_stuPage=0;
-  const cat=(document.getElementById('fCat')?.value||'').trim();
+  // Use catOverride if passed directly (from onchange event), otherwise read DOM
+  const cat=(catOverride!==null?catOverride:(document.getElementById('fCat')?.value||'')).trim();
   const search=(document.getElementById('fSearch')?.value||'').trim().toLowerCase();
   const fc=document.getElementById('fCls');
+  // Sync fCat DOM to match catOverride
+  if(catOverride!==null){const el=document.getElementById('fCat');if(el)el.value=catOverride;}
   // Rebuild class dropdown filtered by category, preserving selection
   if(fc){
     const prev=fc.value;
