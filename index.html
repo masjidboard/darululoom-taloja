@@ -316,7 +316,7 @@ tbody td{padding:7px 10px;vertical-align:middle;}
       <div class="card" style="padding:10px 14px">
         <div class="form-row" style="margin:0;align-items:flex-end">
           <div class="fg"><label id="lFCat">کیٹیگری</label>
-            <select id="fCat" onchange="renderStudents(false,this.value)"><option value="">— سب —</option>
+            <select id="fCat" onchange="renderStudents(false)"><option value="">— سب —</option>
               <option value="حفظ">حفظ</option><option value="دینیات">دینیات</option><option value="عالمیت">عالمیت</option></select></div>
           <div class="fg"><label id="lFCls">درجہ</label><select id="fCls" onchange="renderStudents(false)"><option value="">— سب —</option></select></div>
           <div class="fg"><label id="lSearch">تلاش</label><input id="fSearch" oninput="renderStudents(false)" /></div>
@@ -470,8 +470,7 @@ const T = {
     signTeacher:'دستخط استاذ', signParent:'دستخط سرپرست',
     studentCard:'طالب علم کارڈ', attSummary:'نماز حاضری خلاصہ', noAttRecord:'حاضری کا کوئی ریکارڈ نہیں',
     prayedCount:'نمازیں پڑھیں', printBtn:'🖨️ Print / PDF',
-    MONTHS:['محرم','صفر','ربیع الاول','ربیع الثانی','جمادی الاول','جمادی الثانی','رجب','شعبان','رمضان','شوال','ذیقعدہ','ذیالحجہ',
-      'جنوری','فروری','مارچ','اپریل','مئی','جون','جولائی','اگست','ستمبر','اکتوبر','نومبر','دسمبر'],
+    MONTHS:['January','February','March','April','May','June','July','August','September','October','November','December'],
     NAMAZ:[
       {key:'tahajjud',label:'تہجد',group:''},{key:'fajr_sunnat',label:'سنت',group:'فجر'},{key:'fajr_farz',label:'فرض باجماعت',group:'فجر'},
       {key:'ishraq',label:'اشراق',group:''},{key:'chasht',label:'چاشت',group:''},
@@ -522,8 +521,7 @@ const T = {
     signTeacher:'Teacher Signature', signParent:'Guardian Signature',
     studentCard:'Student Card', attSummary:'Prayer Attendance Summary', noAttRecord:'No attendance records',
     prayedCount:'prayers offered', printBtn:'🖨️ Print / PDF',
-    MONTHS:['Muharram','Safar','Rabi I','Rabi II','Jamadi I','Jamadi II','Rajab','Shaban','Ramadan','Shawwal','Dhul Qada','Dhul Hijja',
-      'January','February','March','April','May','June','July','August','September','October','November','December'],
+    MONTHS:['January','February','March','April','May','June','July','August','September','October','November','December'],
     NAMAZ:[
       {key:'tahajjud',label:'Tahajjud',group:''},{key:'fajr_sunnat',label:'Sunnat',group:'Fajr'},{key:'fajr_farz',label:'Farz (Jamaat)',group:'Fajr'},
       {key:'ishraq',label:'Ishraq',group:''},{key:'chasht',label:'Chasht',group:''},
@@ -844,29 +842,31 @@ window.deleteStudent=async function(id){
 };
 
 let _stuPage=0;const STU_PER_PAGE=20;
-function renderStudents(keepPage=false,catOverride=null){
-  if(!keepPage)_stuPage=0;
-  // Use catOverride if passed directly (from onchange event), otherwise read DOM
-  const cat=(catOverride!==null?catOverride:(document.getElementById('fCat')?.value||'')).trim();
-  const search=(document.getElementById('fSearch')?.value||'').trim().toLowerCase();
+// Rebuild fCls dropdown based on currently selected fCat
+function rebuildClsDrop(){
+  const cat=(document.getElementById('fCat')?.value||'').trim();
   const fc=document.getElementById('fCls');
-  // Sync fCat DOM to match catOverride
-  if(catOverride!==null){const el=document.getElementById('fCat');if(el)el.value=catOverride;}
-  // Rebuild class dropdown filtered by category, preserving selection
-  if(fc){
-    const prev=fc.value;
-    const cls=cat?DB.classes.filter(c=>c.cat===cat):DB.classes;
-    fc.innerHTML=`<option value="">— ${LANG==='ur'?'سب':'All'} —</option>`+cls.map(c=>`<option value="${c.id}" ${c.id===prev?'selected':''}>${c.cat}—${c.name}</option>`).join('');
-    if(prev && !cls.find(c=>c.id===prev)) fc.value='';
-  }
-  // Read classId AFTER rebuilding dropdown
-  const classId=(fc?fc.value:'').trim();
+  if(!fc)return;
+  const prev=fc.value;
+  const cls=cat?DB.classes.filter(c=>c.cat===cat):DB.classes;
+  fc.innerHTML=`<option value="">— ${LANG==='ur'?'سب':'All'} —</option>`+
+    cls.map(c=>`<option value="${c.id}" ${c.id===prev?'selected':''}>${c.cat}—${c.name}</option>`).join('');
+  // If prev class was from a different category, clear it
+  if(prev && !cls.find(c=>c.id===prev)) fc.value='';
+}
+
+function renderStudents(keepPage=false){
+  if(!keepPage)_stuPage=0;
+  // Read cat directly from DOM — always reliable at this point
+  const cat=(document.getElementById('fCat')?.value||'').trim();
+  const search=(document.getElementById('fSearch')?.value||'').trim().toLowerCase();
+  // Rebuild class dropdown filtered by cat
+  rebuildClsDrop();
+  // Read classId AFTER rebuild
+  const classId=(document.getElementById('fCls')?.value||'').trim();
   let stus=DB.students;
-  // Apply category filter first
   if(cat) stus=stus.filter(s=>(s.cat||'').trim()===cat);
-  // Apply class filter
   if(classId) stus=stus.filter(s=>s.classId===classId);
-  // Apply search — only search within already-filtered results
   if(search) stus=stus.filter(s=>(s.name||'').toLowerCase().includes(search)||(s.stuId||'').toLowerCase().includes(search));
   const cc={حفظ:'bg',دینیات:'bb',عالمیت:'br'};
   const total=stus.length;
@@ -1046,7 +1046,7 @@ function initAttendance(){
   sel.innerHTML=`<option value="">— ${LANG==='ur'?'منتخب کریں':'Select'} —</option>`+stus.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
   const mSel=document.getElementById('attMonth'),MONTHS=T[LANG].MONTHS;
   mSel.innerHTML=MONTHS.map((m,i)=>`<option value="${i}">${m}</option>`).join('');
-  mSel.value=new Date().getMonth()+12;
+  mSel.value=new Date().getMonth();
   const yr=new Date().getFullYear();
   document.getElementById('attYear').innerHTML=[yr-1,yr,yr+1].map(y=>`<option value="${y}"${y===yr?' selected':''}>${y}</option>`).join('');
   document.getElementById('attChart').innerHTML='';
@@ -1390,7 +1390,7 @@ window.openAdminAtt=function(stuId){
   const NAMAZ=T[LANG].NAMAZ;
 
   // build month/year selectors
-  let monthOpts=MONTHS.map((m,i)=>`<option value="${i}" ${i===now.getMonth()+12?'selected':''}>${m}</option>`).join('');
+  let monthOpts=MONTHS.map((m,i)=>`<option value="${i}" ${i===now.getMonth()?'selected':''}>${m}</option>`).join('');
   let yr=now.getFullYear();
   let yearOpts=[yr-1,yr,yr+1].map(y=>`<option value="${y}" ${y===yr?'selected':''}>${y}</option>`).join('');
 
@@ -1748,7 +1748,7 @@ function initStudentView(){
   const MONTHS=T[LANG].MONTHS;
   const now=new Date();
   const mSel=document.getElementById('svMonth');
-  mSel.innerHTML=MONTHS.map((m,i)=>`<option value="${i}" ${i===now.getMonth()+12?'selected':''}>${m}</option>`).join('');
+  mSel.innerHTML=MONTHS.map((m,i)=>`<option value="${i}" ${i===now.getMonth()?'selected':''}>${m}</option>`).join('');
   const yr=now.getFullYear();
   document.getElementById('svYear').innerHTML=[yr-1,yr,yr+1].map(y=>`<option value="${y}" ${y===yr?'selected':''}>${y}</option>`).join('');
   renderStudentView();
