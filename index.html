@@ -299,13 +299,13 @@ tbody td{padding:7px 10px;vertical-align:middle;}
         <div class="card-title">🔄 <span id="ttBulkMove">پورا درجہ منتقل کریں</span></div>
         <div class="form-row">
           <div class="fg"><label id="lBmFromCat">کس کیٹیگری سے</label>
-            <select id="bmFromCat" onchange="fillClassDrop('bmFromCls','bmFromCat')">
+            <select id="bmFromCat" onchange="fillClassDrop('bmFromCls','bmFromCat',false,this.value)">
               <option value="حفظ">حفظ</option><option value="دینیات">دینیات</option><option value="عالمیت">عالمیت</option></select></div>
           <div class="fg"><label id="lBmFromCls">کس درجہ سے</label><select id="bmFromCls"></select></div>
         </div>
         <div class="form-row">
           <div class="fg"><label id="lBmToCat">کس کیٹیگری میں</label>
-            <select id="bmToCat" onchange="fillClassDrop('bmToCls','bmToCat')">
+            <select id="bmToCat" onchange="fillClassDrop('bmToCls','bmToCat',false,this.value)">
               <option value="حفظ">حفظ</option><option value="دینیات">دینیات</option><option value="عالمیت">عالمیت</option></select></div>
           <div class="fg"><label id="lBmToCls">کس درجہ میں</label><select id="bmToCls"></select></div>
         </div>
@@ -692,7 +692,15 @@ window.showTab=function(name,btn){
   if(btn)btn.classList.add('active');
   if(name==='dashboard')renderDashboard();
   if(name==='classes')renderClasses();
-  if(name==='students'){fillClassDrop('sCls','sCat');fillClassDrop('bmFromCls','bmFromCat');fillClassDrop('bmToCls','bmToCat');renderStudents();}
+  if(name==='students'){
+    const bmFromCat=document.getElementById('bmFromCat')?.value||'حفظ';
+    const bmToCat=document.getElementById('bmToCat')?.value||'حفظ';
+    fillClassDrop('sCls','sCat');
+    fillClassDrop('bmFromCls','bmFromCat',false,bmFromCat);
+    fillClassDrop('bmToCls','bmToCat',false,bmToCat);
+    rebuildClsDrop();
+    renderStudents();
+  }
   if(name==='accounts')renderAccounts();
   if(name==='attendance')initAttendance();
   if(name==='mystudents')renderMyStudents();
@@ -816,11 +824,12 @@ window.downloadClassTemplate=function(){
   XLSX.writeFile(wb,'classes_template.xlsx');toast(t('tplDownloaded'));
 };
 
-window.fillClassDrop=function(selId,catId,addAll=false){
-  const cat=document.getElementById(catId)?.value||'';const sel=document.getElementById(selId);if(!sel)return;
+window.fillClassDrop=function(selId,catId,addAll=false,forceCat){
+  const cat=forceCat!==undefined?forceCat:(document.getElementById(catId)?.value||'');
+  const sel=document.getElementById(selId);if(!sel)return;
   const cls=cat?DB.classes.filter(c=>c.cat===cat):DB.classes;
   sel.innerHTML=(addAll?`<option value="">— ${LANG==='ur'?'سب':'All'} —</option>`:'')+
-    (cls.length?cls.map(c=>`<option value="${c.id}">${c.cat}—${c.name}</option>`).join(''):`<option value="">${t('needClass')}</option>`);
+    (cls.length?cls.map(c=>`<option value="${c.id}">${c.name}</option>`).join(''):`<option value="">${t('needClass')}</option>`);
 };
 
 window.addStudent=async function(){
