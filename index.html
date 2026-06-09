@@ -356,8 +356,27 @@ tbody td{padding:7px 10px;vertical-align:middle;}
           <div class="fg"><label id="lAttYear">سال</label><select id="attYear" onchange="loadAttendance()"></select></div>
         </div>
         <button class="btn btn-gold btn-sm" onclick="exportAttPDF()" id="btnAttPDF">📄 PDF Export</button>
-        <button class="btn btn-green btn-sm" onclick="sendAttWhatsApp()" id="btnAttWA">📱 WhatsApp رپورٹ</button>
+        <div style="margin-top:8px;font-size:12px;color:var(--subtext)" id="lblWAreport">📱 واٹس ایپ رپورٹ بھیجیں:</div>
+        <div class="btn-wrap">
+          <button class="btn btn-green btn-sm" onclick="sendAttWhatsApp('daily')" id="btnWADaily">🗓️ روزانہ</button>
+          <button class="btn btn-green btn-sm" onclick="sendAttWhatsApp('weekly')" id="btnWAWeekly">📆 ہفتہ وار</button>
+          <button class="btn btn-green btn-sm" onclick="sendAttWhatsApp('monthly')" id="btnWAMonthly">🗓️ ماہانہ</button>
+        </div>
       </div>
+      <div class="card">
+        <div class="card-title">📤 <span id="ttBulkWA">پوری کلاس کو رپورٹ بھیجیں</span></div>
+        <div class="form-row">
+          <div class="fg"><label id="lBwCat">کیٹیگری</label>
+            <select id="bwCat" onchange="fillClassDrop('bwCls','bwCat')">
+              <option value="حفظ">حفظ</option><option value="دینیات">دینیات</option><option value="عالمیت">عالمیت</option></select></div>
+          <div class="fg"><label id="lBwCls">درجہ</label><select id="bwCls"></select></div>
+        </div>
+        <div style="font-size:12px;color:var(--subtext);margin-bottom:4px" id="lblBwPeriod">مدت منتخب کریں:</div>
+        <div class="btn-wrap">
+          <button class="btn btn-blue btn-sm" onclick="bulkSendReports('daily')" id="btnBwDaily">🗓️ روزانہ</button>
+          <button class="btn btn-blue btn-sm" onclick="bulkSendReports('weekly')" id="btnBwWeekly">📆 ہفتہ وار</button>
+          <button class="btn btn-blue btn-sm" onclick="bulkSendReports('monthly')" id="btnBwMonthly">🗓️ ماہانہ</button>
+        </div>
       <div id="attChart"></div>
     </div>
     <div id="tab-mystudents" style="display:none">
@@ -428,6 +447,9 @@ const T = {
     btnAddCls:'➕ شامل کریں', btnImportCls:'📥 Excel Import', btnExportCls:'📤 Excel Export', btnTplCls:'📋 Template',
     btnAddStu:'➕ شامل کریں', btnImportStu:'📥 Excel Import', btnExportStu:'📤 Excel Export', btnTplStu:'📋 Template',
     ttBulkMove:'پورا درجہ منتقل کریں', lBmFromCat:'کس کیٹیگری سے', lBmFromCls:'کس درجہ سے',
+    lblWAreport:'📱 واٹس ایپ رپورٹ بھیجیں:', btnWADaily:'🗓️ روزانہ', btnWAWeekly:'📆 ہفتہ وار', btnWAMonthly:'🗓️ ماہانہ',
+    ttBulkWA:'پوری کلاس کو رپورٹ بھیجیں', lBwCat:'کیٹیگری', lBwCls:'درجہ', lblBwPeriod:'مدت منتخب کریں:',
+    btnBwDaily:'🗓️ روزانہ', btnBwWeekly:'📆 ہفتہ وار', btnBwMonthly:'🗓️ ماہانہ',
     lBmToCat:'کس کیٹیگری میں', lBmToCls:'کس درجہ میں', btnBulkMove:'🔄 سب طلبہ کو منتقل کریں',
     bmHint:'منتخب درجہ کے تمام طلبہ نئے درجہ میں منتقل ہو جائیں گے۔',
     btnWAPreview:'👁️ پیش نظارہ', btnWAcsv:'📥 CSV', btnAttPDF:'📄 PDF Export',
@@ -477,6 +499,9 @@ const T = {
     btnAddCls:'➕ Add', btnImportCls:'📥 Excel Import', btnExportCls:'📤 Excel Export', btnTplCls:'📋 Template',
     btnAddStu:'➕ Add', btnImportStu:'📥 Excel Import', btnExportStu:'📤 Excel Export', btnTplStu:'📋 Template',
     ttBulkMove:'Move Entire Class', lBmFromCat:'From Category', lBmFromCls:'From Class',
+    lblWAreport:'📱 Send WhatsApp report:', btnWADaily:'🗓️ Daily', btnWAWeekly:'📆 Weekly', btnWAMonthly:'🗓️ Monthly',
+    ttBulkWA:'Send Report to Whole Class', lBwCat:'Category', lBwCls:'Class', lblBwPeriod:'Choose period:',
+    btnBwDaily:'🗓️ Daily', btnBwWeekly:'📆 Weekly', btnBwMonthly:'🗓️ Monthly',
     lBmToCat:'To Category', lBmToCls:'To Class', btnBulkMove:'🔄 Move All Students',
     bmHint:'All students of the selected class will be moved to the new class.',
     btnWAPreview:'👁️ Preview', btnWAcsv:'📥 CSV', btnAttPDF:'📄 PDF Export',
@@ -552,7 +577,9 @@ function applyTranslations(){
     'lFCat','lFCls','lSearch','lWCat','lWCls','lWMsg','lAttStu','lAttMonth','lAttYear',
     'btnAddCls','btnImportCls','btnExportCls','btnTplCls','btnAddStu','btnImportStu','btnExportStu','btnTplStu',
     'btnWAPreview','btnWAcsv','btnAttPDF','btnMyStuPDF','btnMyStuXls','btnClose',
-    'ttBulkMove','lBmFromCat','lBmFromCls','lBmToCat','lBmToCls','btnBulkMove','bmHint'];
+    'ttBulkMove','lBmFromCat','lBmFromCls','lBmToCat','lBmToCls','btnBulkMove','bmHint',
+    'lblWAreport','btnWADaily','btnWAWeekly','btnWAMonthly',
+    'ttBulkWA','lBwCat','lBwCls','lblBwPeriod','btnBwDaily','btnBwWeekly','btnBwMonthly'];
   ids.forEach(id=>{const el=document.getElementById(id);if(el&&t[id])el.textContent=t[id];});
   const loginBtn=document.getElementById('loginBtn');if(loginBtn)loginBtn.textContent=t.loginBtn;
   const lid=document.getElementById('lid');if(lid)lid.placeholder=LANG==='ur'?'آئی ڈی':'ID';
@@ -980,6 +1007,7 @@ function initAttendance(){
   const yr=new Date().getFullYear();
   document.getElementById('attYear').innerHTML=[yr-1,yr,yr+1].map(y=>`<option value="${y}"${y===yr?' selected':''}>${y}</option>`).join('');
   document.getElementById('attChart').innerHTML='';
+  fillClassDrop('bwCls','bwCat');
 }
 
 window.loadAttendance=function(){
@@ -1164,79 +1192,134 @@ function ensureStudentLogin(stu){
   return true;
 }
 
-window.sendAttWhatsApp=function(){
+// ===== UNIFIED REPORT BUILDER (daily / weekly / monthly) =====
+function symFor(v){if(v===true)return'✅';if(v==='alone')return'🟡';if(v===false)return'❌';return'—';}
+function reportPeriodMeta(period){
+  const dnum=new Date().getDate();
+  if(period==='daily')return{days:[dnum],label:(LANG==='ur'?`📅 روزانہ رپورٹ (تاریخ ${dnum})`:`📅 Daily Report (Day ${dnum})`)};
+  if(period==='weekly'){const days=[];const from=Math.max(1,dnum-6);for(let d=from;d<=dnum;d++)days.push(d);
+    return{days,label:(LANG==='ur'?`📅 ہفتہ وار رپورٹ (تاریخ ${from}–${dnum})`:`📅 Weekly Report (Day ${from}–${dnum})`)};}
+  const days=[];for(let d=1;d<=31;d++)days.push(d);
+  return{days,label:(LANG==='ur'?'📅 ماہانہ رپورٹ':'📅 Monthly Report')};
+}
+function composeReport(stu,period){
+  const month=document.getElementById('attMonth').value;
+  const year=document.getElementById('attYear').value;
+  const MONTHS=T[LANG].MONTHS,NAMAZ=T[LANG].NAMAZ;
+  const key=`${stu.id}_${year}_${month}`;
+  const att=(DB.attendance&&DB.attendance[key])||{};
+  const getVal=(k,d)=>att[k]?att[k][d]:undefined;
+  const {days,label}=reportPeriodMeta(period);
+  const L=[];
+  L.push(LANG==='ur'?'السلام علیکم ورحمۃ اللہ وبرکاتہ!':'Assalamu Alaikum wa Rahmatullah!');
+  L.push('📚 '+(LANG==='ur'?'دارالعلوم اسلامیہ عربیہ تلوجہ':'Darul Uloom Islamia Arabia Taloja'));
+  L.push('━━━━━━━━━━━━━━━━');
+  L.push((LANG==='ur'?'👤 طالب علم: ':'👤 Student: ')+`*${stu.name}*`);
+  L.push((LANG==='ur'?'📖 درجہ: ':'📖 Class: ')+(stu.className||stu.cat));
+  L.push((LANG==='ur'?'🗓️ ماہ: ':'🗓️ Month: ')+MONTHS[month]+' '+year);
+  L.push(label);
+  L.push('━━━━━━━━━━━━━━━━');
+  if(period==='daily'){
+    L.push(LANG==='ur'?'🕌 *اس دن کی نماز:*':'🕌 *Prayers for the day:*');
+    let lastGrp='',any=false;
+    NAMAZ.forEach(row=>{
+      const v=getVal(row.key,days[0]);
+      if(v===undefined)return;any=true;
+      if(row.group&&row.group!==lastGrp){L.push('');L.push(`*🕐 ${row.group}*`);lastGrp=row.group;}
+      else if(!row.group){lastGrp='';}
+      L.push(`  ${row.label}: ${symFor(v)}`);
+    });
+    if(!any)L.push(LANG==='ur'?'  (اس دن کوئی حاضری درج نہیں)':'  (No attendance recorded)');
+  }else{
+    L.push(LANG==='ur'?'🕌 *نماز حاضری کی تفصیل:*':'🕌 *Prayer Attendance:*');
+    L.push('');
+    let lastGrp='';
+    NAMAZ.forEach(row=>{
+      const jamaat=row.key.includes('_farz');
+      let yes=0,alone=0,no=0;
+      days.forEach(d=>{const v=getVal(row.key,d);if(v===true)yes++;else if(v==='alone')alone++;else if(v===false)no++;});
+      if(yes+alone+no===0)return;
+      if(row.group&&row.group!==lastGrp){L.push('');L.push(`*🕐 ${row.group}*`);lastGrp=row.group;}
+      else if(!row.group){lastGrp='';}
+      L.push(`  ${row.label}: `+(jamaat?`✅${yes} 🟡${alone} ❌${no}`:`✅${yes} ❌${no}`));
+    });
+    L.push('');L.push('━━━━━━━━━━━━━━━━');
+    L.push(LANG==='ur'?'📊 *فرض نمازوں کا خلاصہ:*':'📊 *Farz Prayer Summary:*');
+    const farzKeys=[{g:LANG==='ur'?'فجر':'Fajr',k:'fajr_farz'},{g:LANG==='ur'?'ظہر':'Zuhr',k:'zuhr_farz'},
+      {g:LANG==='ur'?'عصر':'Asr',k:'asr_farz'},{g:LANG==='ur'?'مغرب':'Maghrib',k:'maghrib_farz'},{g:LANG==='ur'?'عشاء':'Isha',k:'isha_farz'}];
+    let totJ=0,totA=0,totM=0;
+    farzKeys.forEach(({g,k})=>{let j=0,a=0,m=0;days.forEach(d=>{const v=getVal(k,d);if(v===true)j++;else if(v==='alone')a++;else if(v===false)m++;});if(j+a+m===0)return;totJ+=j;totA+=a;totM+=m;L.push(`  ${g}: ✅${j} 🟡${a} ❌${m}`);});
+    L.push('');
+    L.push((LANG==='ur'?'  مجموعی باجماعت: ':'  Total Jamaat: ')+`✅${totJ}`);
+    L.push((LANG==='ur'?'  مجموعی اکیلے: ':'  Total Alone: ')+`🟡${totA}`);
+    L.push((LANG==='ur'?'  مجموعی غیر حاضر: ':'  Total Missed: ')+`❌${totM}`);
+  }
+  L.push('');L.push('━━━━━━━━━━━━━━━━');
+  L.push(LANG==='ur'?'گھر پر نماز کی ترغیب دیتے رہیں۔':'Please encourage prayers at home.');
+  L.push('');
+  ensureStudentLogin(stu);
+  L.push(LANG==='ur'?'🔑 *آپ کے بچے کا پورٹل لاگ ان:*':'🔑 *Portal Login for Guardian:*');
+  L.push((LANG==='ur'?'  🌐 لنک: ':'  🌐 Link: ')+'https://masjidboard.github.io/darululoom-taloja/');
+  L.push((LANG==='ur'?'  آئی ڈی: ':'  ID: ')+stu.stuId);
+  L.push((LANG==='ur'?'  پاس ورڈ: ':'  Password: ')+stu.stuPass);
+  L.push('');
+  L.push(LANG==='ur'?'جزاکم اللہ خیرا 🤲':'JazakAllah Khair 🤲');
+  return L.join('\n');
+}
+
+window.sendAttWhatsApp=function(period='monthly'){
   const stuId=document.getElementById('attStu').value;
   if(!stuId){toast(t('selectFirst'),'red');return;}
   const stu=DB.students.find(s=>s.id===stuId);
   if(!stu)return;
   if(!stu.phone){toast(LANG==='ur'?'اس طالب علم کا نمبر درج نہیں':'No phone number','red');return;}
-  const month=document.getElementById('attMonth').value;
-  const year=document.getElementById('attYear').value;
-  const MONTHS=T[LANG].MONTHS;
-  const key=`${stuId}_${year}_${month}`;
-  const att=(DB.attendance&&DB.attendance[key])||{};
-  const NAMAZ=T[LANG].NAMAZ;
-  const getVal=(k,d)=>att[k]?att[k][d]:undefined;
-  let lines=[];
-  lines.push(LANG==='ur'?'السلام علیکم ورحمۃ اللہ وبرکاتہ!':'Assalamu Alaikum wa Rahmatullah!');
-  lines.push('📚 '+(LANG==='ur'?'دارالعلوم اسلامیہ عربیہ تلوجہ':'Darul Uloom Islamia Arabia Taloja'));
-  lines.push('━━━━━━━━━━━━━━━━');
-  lines.push((LANG==='ur'?'👤 طالب علم: ':'👤 Student: ')+`*${stu.name}*`);
-  lines.push((LANG==='ur'?'📖 درجہ: ':'📖 Class: ')+(stu.className||stu.cat));
-  lines.push((LANG==='ur'?'📅 ماہ: ':'📅 Month: ')+MONTHS[month]+' '+year);
-  lines.push('━━━━━━━━━━━━━━━━');
-  lines.push(LANG==='ur'?'🕌 *نماز حاضری کی مکمل تفصیل:*':'🕌 *Complete Prayer Attendance:*');
-  lines.push('');
-  let lastGrp='';
-  NAMAZ.forEach(row=>{
-    const jamaat=row.key.includes('_farz');
-    if(row.group&&row.group!==lastGrp){lines.push('');lines.push(`*🕐 ${row.group}*`);lastGrp=row.group;}
-    else if(!row.group){lastGrp='';}
-    let yes=0,alone=0,no=0;
-    for(let d=1;d<=31;d++){const v=getVal(row.key,d);if(v===true)yes++;else if(v==='alone')alone++;else if(v===false)no++;}
-    if(yes+alone+no===0)return;
-    let line=`  ${row.label}: `;
-    if(jamaat){line+=`✅${yes} 🟡${alone} ❌${no}`;}
-    else{line+=`✅${yes} ❌${no}`;}
-    lines.push(line);
-  });
-  lines.push('');lines.push('━━━━━━━━━━━━━━━━');
-  lines.push(LANG==='ur'?'📊 *فرض نمازوں کا خلاصہ:*':'📊 *Farz Prayer Summary:*');
-  const farzKeys=[
-    {g:LANG==='ur'?'فجر':'Fajr',k:'fajr_farz'},
-    {g:LANG==='ur'?'ظہر':'Zuhr',k:'zuhr_farz'},
-    {g:LANG==='ur'?'عصر':'Asr',k:'asr_farz'},
-    {g:LANG==='ur'?'مغرب':'Maghrib',k:'maghrib_farz'},
-    {g:LANG==='ur'?'عشاء':'Isha',k:'isha_farz'}
-  ];
-  let totJ=0,totA=0,totM=0;
-  farzKeys.forEach(({g,k})=>{
-    let j=0,a=0,m=0;
-    for(let d=1;d<=31;d++){const v=getVal(k,d);if(v===true)j++;else if(v==='alone')a++;else if(v===false)m++;}
-    if(j+a+m===0)return;
-    totJ+=j;totA+=a;totM+=m;
-    lines.push(`  ${g}: ✅${j} 🟡${a} ❌${m}`);
-  });
-  lines.push('');
-  lines.push((LANG==='ur'?'  مجموعی باجماعت: ':'  Total Jamaat: ')+`✅${totJ}`);
-  lines.push((LANG==='ur'?'  مجموعی اکیلے: ':'  Total Alone: ')+`🟡${totA}`);
-  lines.push((LANG==='ur'?'  مجموعی غیر حاضر: ':'  Total Missed: ')+`❌${totM}`);
-  lines.push('');lines.push('━━━━━━━━━━━━━━━━');
-  lines.push(LANG==='ur'?'گھر پر نماز کی ترغیب دیتے رہیں۔':'Please encourage prayers at home.');
-  lines.push('');
-  // Add student login details (auto-generate if missing)
-  const created1=ensureStudentLogin(stu);
-  lines.push(LANG==='ur'?'🔑 *آپ کے بچے کا پورٹل لاگ ان:*':'🔑 *Portal Login for Guardian:*');
-  lines.push((LANG==='ur'?'  🌐 لنک: ':'  🌐 Link: ')+'https://masjidboard.github.io/darululoom-taloja/');
-  lines.push((LANG==='ur'?'  آئی ڈی: ':'  ID: ')+stu.stuId);
-  lines.push((LANG==='ur'?'  پاس ورڈ: ':'  Password: ')+stu.stuPass);
-  lines.push(LANG==='ur'?'  (اپنے بچے کا مکمل نماز ریکارڈ دیکھیں)':'  (View complete prayer record of your child)');
-  lines.push('');
-  lines.push(LANG==='ur'?'جزاکم اللہ خیرا 🤲':'JazakAllah Khair 🤲');
-  const msg=lines.join('\n');
+  const msg=composeReport(stu,period);
   const phone=stu.phone.replace(/[^0-9]/g,'');
   window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`,'_blank');
-  if(created1)save();
+  save();
+};
+
+// ===== BULK: send reports to a whole class (one tap per student) =====
+window.bulkSendReports=function(period){
+  const clsId=document.getElementById('bwCls').value;
+  if(!clsId){toast(LANG==='ur'?'پہلے درجہ منتخب کریں':'Select a class first','red');return;}
+  const cls=DB.classes.find(c=>c.id===clsId);
+  const list=DB.students.filter(s=>s.classId===clsId);
+  if(!list.length){toast(LANG==='ur'?'اس درجہ میں کوئی طالب علم نہیں':'No students in this class','red');return;}
+  const hasPhone=s=>s.phone&&s.phone.replace(/[^0-9]/g,'').length>=7;
+  const withPhone=list.filter(hasPhone);
+  const periodLabel=period==='daily'?(LANG==='ur'?'روزانہ':'Daily'):period==='weekly'?(LANG==='ur'?'ہفتہ وار':'Weekly'):(LANG==='ur'?'ماہانہ':'Monthly');
+  let createdAny=false;list.forEach(s=>{if(ensureStudentLogin(s))createdAny=true;});
+  if(createdAny)save();
+  const rows=list.map((s,i)=>`<tr>
+      <td style="text-align:center">${i+1}</td>
+      <td style="text-align:${LANG==='ur'?'right':'left'}">${s.name}</td>
+      <td style="text-align:center">${hasPhone(s)
+        ?`<button class="btn btn-green btn-xs" id="bwbtn${i}" onclick="bulkSendOne('${s.id}','${period}',${i})">📱 ${LANG==='ur'?'بھیجیں':'Send'}</button>`
+        :`<span style="color:var(--subtext);font-size:11px">${LANG==='ur'?'نمبر نہیں':'No phone'}</span>`}</td></tr>`).join('');
+  document.getElementById('mTitle').textContent='📤 '+(cls?cls.name:'')+' — '+periodLabel;
+  document.getElementById('mBody').innerHTML=`
+    <div style="font-size:12px;color:var(--subtext);margin-bottom:8px;line-height:1.8">
+      ${LANG==='ur'
+        ?`کل <b>${list.length}</b> طلبہ، <b>${withPhone.length}</b> کے نمبر موجود۔<br>⚠️ واٹس ایپ کی پابندی کے باعث ہر طالب علم کو الگ "بھیجیں" دبانا ہوگا (ایک کلک)۔ ہر کلک واٹس ایپ کھولے گا جہاں پیغام پہلے سے لکھا ہوگا — آپ بس Send دبائیں۔`
+        :`<b>${list.length}</b> students, <b>${withPhone.length}</b> have phone numbers.<br>⚠️ Due to WhatsApp's limits you tap "Send" per student (one click each). Each opens WhatsApp with the message pre-filled — just press Send.`}
+    </div>
+    <div style="max-height:48vh;overflow-y:auto;border:1px solid var(--border);border-radius:8px">
+      <table style="width:100%"><tbody>${rows}</tbody></table>
+    </div>
+    <div style="display:flex;justify-content:flex-end;margin-top:12px">
+      <button class="btn btn-red btn-sm" onclick="closeModal()">${LANG==='ur'?'بند کریں':'Close'}</button>
+    </div>`;
+  document.getElementById('ov').classList.add('open');
+};
+
+window.bulkSendOne=function(stuId,period,idx){
+  const stu=DB.students.find(s=>s.id===stuId);if(!stu||!stu.phone)return;
+  const msg=composeReport(stu,period);
+  const phone=stu.phone.replace(/[^0-9]/g,'');
+  window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`,'_blank');
+  const b=document.getElementById('bwbtn'+idx);
+  if(b){b.textContent='✓ '+(LANG==='ur'?'بھیج دیا':'Sent');b.style.background='#888';b.style.color='#fff';}
 };
 
 window.sendStudentWA=function(stuId){
