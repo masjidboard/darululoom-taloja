@@ -843,7 +843,9 @@ window.deleteStudent=async function(id){
   DB.students=DB.students.filter(s=>s.id!==id);await save();renderStudents();toast(t('deletedToast'));
 };
 
-function renderStudents(){
+let _stuPage=0;const STU_PER_PAGE=20;
+function renderStudents(keepPage=false){
+  if(!keepPage)_stuPage=0;
   const cat=document.getElementById('fCat')?.value||'',classId=document.getElementById('fCls')?.value||'';
   const search=(document.getElementById('fSearch')?.value||'').toLowerCase();
   const fc=document.getElementById('fCls');
@@ -853,9 +855,19 @@ function renderStudents(){
   if(cat)stus=stus.filter(s=>s.cat===cat);if(classId)stus=stus.filter(s=>s.classId===classId);
   if(search)stus=stus.filter(s=>s.name.toLowerCase().includes(search));
   const cc={حفظ:'bg',دینیات:'bb',عالمیت:'br'};
-  document.getElementById('studTable').innerHTML=stus.length
-    ?`<table><thead><tr><th>#</th><th>${t('thName')}</th><th>${t('thPhone')}</th><th>${t('thCat')}</th><th>${t('thClass')}</th><th>${t('thId')} / ${t('thPass')}</th><th>${t('thPDF')}</th><th>WA</th><th>${LANG==='ur'?'چارٹ':'Chart'}</th><th>${LANG==='ur'?'منتقل':'Move'}</th><th>${LANG==='ur'?'ترمیم':'Edit'}</th><th>${t('thDelete')}</th></tr></thead>
-    <tbody>${stus.map((s,i)=>`<tr><td>${i+1}</td><td>${s.name}</td><td>${s.phone||'—'}</td>
+  const total=stus.length;
+  const totalPages=Math.max(1,Math.ceil(total/STU_PER_PAGE));
+  if(_stuPage>=totalPages)_stuPage=totalPages-1;
+  const start=_stuPage*STU_PER_PAGE;
+  const pageStus=stus.slice(start,start+STU_PER_PAGE);
+  const mkPager=()=>totalPages>1?`<div style="display:flex;align-items:center;justify-content:center;gap:10px;padding:8px 4px;flex-wrap:wrap">
+    <button class="btn btn-sm" style="background:var(--green);color:white;min-width:38px;font-size:16px" onclick="window._stuNav(-1)" ${_stuPage===0?'disabled':''}>&#8592;</button>
+    <span style="font-size:12px;color:var(--subtext)">${LANG==='ur'?`صفحہ ${_stuPage+1} / ${totalPages} — کل: ${total}`:`Page ${_stuPage+1} / ${totalPages} — Total: ${total}`}</span>
+    <button class="btn btn-sm" style="background:var(--green);color:white;min-width:38px;font-size:16px" onclick="window._stuNav(1)" ${_stuPage>=totalPages-1?'disabled':''}>&#8594;</button>
+  </div>`:'';
+  document.getElementById('studTable').innerHTML=pageStus.length
+    ?mkPager()+`<table><thead><tr><th>#</th><th>${t('thName')}</th><th>${t('thPhone')}</th><th>${t('thCat')}</th><th>${t('thClass')}</th><th>${t('thId')} / ${t('thPass')}</th><th>${t('thPDF')}</th><th>WA</th><th>${LANG==='ur'?'چارٹ':'Chart'}</th><th>${LANG==='ur'?'منتقل':'Move'}</th><th>${LANG==='ur'?'ترمیم':'Edit'}</th><th>${t('thDelete')}</th></tr></thead>
+    <tbody>${pageStus.map((s,i)=>`<tr><td>${start+i+1}</td><td>${s.name}</td><td>${s.phone||'—'}</td>
     <td><span class="badge ${cc[s.cat]||'bo'}">${s.cat}</span></td><td>${s.className||'—'}</td>
     <td><div style="font-size:10px;background:var(--gp);padding:2px 5px;border-radius:4px;font-family:monospace">${s.stuId||'—'}</div><div style="font-size:9px;color:var(--subtext)">${s.stuPass||'—'}</div></td>
     <td><button class="btn btn-blue btn-xs" onclick="exportStudentPDF('${s.id}')">📄</button></td>
@@ -863,9 +875,10 @@ function renderStudents(){
     <td><button class="btn btn-xs" style="background:#1a3e6b;color:white" onclick="openAdminAtt('${s.id}')">📅 چارٹ</button></td>
     <td><button class="btn btn-xs" style="background:#7a4eb0;color:white" onclick="transferStudent('${s.id}')">🔄</button></td>
     <td><button class="btn btn-gold btn-xs" onclick="editStudent('${s.id}')">✏️</button></td>
-    <td><button class="btn btn-red btn-xs" onclick="deleteStudent('${s.id}')">✕</button></td></tr>`).join('')}</tbody></table>`
+    <td><button class="btn btn-red btn-xs" onclick="deleteStudent('${s.id}')">✕</button></td></tr>`).join('')}</tbody></table>`+mkPager()
     :`<div class="empty">${t('noStudent')}</div>`;
 }
+window._stuNav=function(dir){_stuPage+=dir;renderStudents(true);document.getElementById('studTable').scrollIntoView({behavior:'smooth',block:'start'});};
 
 window.importStudents=async function(input){
   const file=input.files[0];if(!file)return;
@@ -956,17 +969,31 @@ window.deleteAccount=async function(id){
   DB.accounts=DB.accounts.filter(a=>a.id!==id);await save();renderAccounts();toast(t('deletedToast'));
 };
 
-function renderAccounts(){
+let _accPage=0;const ACC_PER_PAGE=20;
+function renderAccounts(keepPage=false){
+  if(!keepPage)_accPage=0;
   const rc={admin:'br',teacher:'bb'};
-  document.getElementById('accTable').innerHTML=`<table>
+  const accs=DB.accounts;
+  const total=accs.length;
+  const totalPages=Math.max(1,Math.ceil(total/ACC_PER_PAGE));
+  if(_accPage>=totalPages)_accPage=totalPages-1;
+  const start=_accPage*ACC_PER_PAGE;
+  const pageAccs=accs.slice(start,start+ACC_PER_PAGE);
+  const mkPager=()=>totalPages>1?`<div style="display:flex;align-items:center;justify-content:center;gap:10px;padding:8px 4px;flex-wrap:wrap">
+    <button class="btn btn-sm" style="background:var(--green);color:white;min-width:38px;font-size:16px" onclick="window._accNav(-1)" ${_accPage===0?'disabled':''}>&#8592;</button>
+    <span style="font-size:12px;color:var(--subtext)">${LANG==='ur'?`صفحہ ${_accPage+1} / ${totalPages} — کل: ${total}`:`Page ${_accPage+1} / ${totalPages} — Total: ${total}`}</span>
+    <button class="btn btn-sm" style="background:var(--green);color:white;min-width:38px;font-size:16px" onclick="window._accNav(1)" ${_accPage>=totalPages-1?'disabled':''}>&#8594;</button>
+  </div>`:'';
+  document.getElementById('accTable').innerHTML=mkPager()+`<table>
     <thead><tr><th>#</th><th>${t('thName')}</th><th>${t('thId')}</th><th>${t('thPass')}</th><th>${t('thRole')}</th><th>${t('thClass')}</th><th>${t('thAction')}</th></tr></thead>
-    <tbody>${DB.accounts.map((a,i)=>{const cls=DB.classes.find(c=>c.id===a.classId);
-      return`<tr><td>${i+1}</td><td>${a.name}</td><td style="font-family:monospace;direction:ltr;text-align:left;font-size:11px">${a.id}</td>
+    <tbody>${pageAccs.map((a,i)=>{const cls=DB.classes.find(c=>c.id===a.classId);
+      return`<tr><td>${start+i+1}</td><td>${a.name}</td><td style="font-family:monospace;direction:ltr;text-align:left;font-size:11px">${a.id}</td>
       <td style="font-family:monospace;font-size:11px">${a.pass}</td>
-      <td><span class="badge ${rc[a.role]||'bg'}">${a.role==='admin'?t('admin'):t('teacher')}</span></td>
+      <td><span class="badge ${rc[a.role]||'bg'}">${a.role==='admin'?t('admin'):a.role==='student'?(LANG==='ur'?'طالب علم':'Student'):t('teacher')}</span></td>
       <td>${cls?cls.cat+'—'+cls.name:LANG==='ur'?'سب':'All'}</td>
-      <td>${a.id!=='darululoom'?`<button class="btn btn-red btn-xs" onclick="deleteAccount('${a.id}')">✕</button>`:'—'}</td></tr>`;}).join('')}</tbody></table>`;
+      <td>${a.id!=='darululoom'?`<button class="btn btn-red btn-xs" onclick="deleteAccount('${a.id}')">✕</button>`:'—'}</td></tr>`;}).join('')}</tbody></table>`+mkPager();
 }
+window._accNav=function(dir){_accPage+=dir;renderAccounts(true);document.getElementById('accTable').scrollIntoView({behavior:'smooth',block:'start'});};
 
 window.previewWa=function(){
   const cat=document.getElementById('wCat').value,cid=document.getElementById('wCls').value,tpl=document.getElementById('wMsg').value;
