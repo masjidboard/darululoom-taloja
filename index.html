@@ -148,6 +148,7 @@ tbody td{padding:7px 10px;vertical-align:middle;}
 /* Wide tables scroll horizontally inside their cards instead of breaking layout */
 #studTable,#accTable,#attChart,#myStudTable,#studentViewChart,#classesDisplay{overflow-x:auto;-webkit-overflow-scrolling:touch;}
 #studTable table,#accTable table,#myStudTable table{min-width:640px;}
+#attChart{overflow-x:auto;-webkit-overflow-scrolling:touch;max-width:100%;}
 
 /* Tablet */
 @media (max-width:1024px){
@@ -316,10 +317,10 @@ tbody td{padding:7px 10px;vertical-align:middle;}
       <div class="card" style="padding:10px 14px">
         <div class="form-row" style="margin:0;align-items:flex-end">
           <div class="fg"><label id="lFCat">کیٹیگری</label>
-            <select id="fCat" onchange="renderStudents(false)"><option value="">— سب —</option>
+            <select id="fCat" onchange="setTimeout(()=>renderStudents(false),0)"><option value="">— سب —</option>
               <option value="حفظ">حفظ</option><option value="دینیات">دینیات</option><option value="عالمیت">عالمیت</option></select></div>
-          <div class="fg"><label id="lFCls">درجہ</label><select id="fCls" onchange="renderStudents(false)"><option value="">— سب —</option></select></div>
-          <div class="fg"><label id="lSearch">تلاش</label><input id="fSearch" oninput="renderStudents(false)" /></div>
+          <div class="fg"><label id="lFCls">درجہ</label><select id="fCls" onchange="setTimeout(()=>renderStudents(false),0)"><option value="">— سب —</option></select></div>
+          <div class="fg"><label id="lSearch">تلاش (نام / آئی ڈی / فون)</label><input id="fSearch" oninput="setTimeout(()=>renderStudents(false),0)" placeholder="نام، آئی ڈی، یا فون نمبر" /></div>
         </div>
       </div>
       <div class="card"><div class="card-title" id="ttStuList">👨‍🎓 طلبہ</div><div id="studTable"></div></div>
@@ -377,7 +378,10 @@ tbody td{padding:7px 10px;vertical-align:middle;}
           <button class="btn btn-blue btn-sm" onclick="bulkSendReports('weekly')" id="btnBwWeekly">📆 ہفتہ وار</button>
           <button class="btn btn-blue btn-sm" onclick="bulkSendReports('monthly')" id="btnBwMonthly">🗓️ ماہانہ</button>
         </div>
-      <div id="attChart"></div>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden">
+        <div id="attChart" style="overflow-x:auto;-webkit-overflow-scrolling:touch;max-width:100%"></div>
+      </div>
     </div>
     <div id="tab-mystudents" style="display:none">
       <div class="card">
@@ -867,7 +871,12 @@ function renderStudents(keepPage=false){
   let stus=DB.students;
   if(cat) stus=stus.filter(s=>(s.cat||'').trim()===cat);
   if(classId) stus=stus.filter(s=>s.classId===classId);
-  if(search) stus=stus.filter(s=>(s.name||'').toLowerCase().includes(search)||(s.stuId||'').toLowerCase().includes(search));
+  if(search) stus=stus.filter(s=>
+    (s.name||'').toLowerCase().includes(search)||
+    (s.stuId||'').toLowerCase().includes(search)||
+    (s.phone||'').replace(/\D/g,'').includes(search.replace(/\D/g,''))||
+    (s.phone||'').toLowerCase().includes(search)
+  );
   const cc={حفظ:'bg',دینیات:'bb',عالمیت:'br'};
   const total=stus.length;
   const totalPages=Math.max(1,Math.ceil(total/STU_PER_PAGE));
@@ -1094,7 +1103,7 @@ window.loadAttendance=function(){
     <div class="namaz-subheader"><span>${LANG==='ur'?'درجہ':'Class'}: <b>${stu.className||stu.cat}</b></span>
       <span>✅=${LANG==='ur'?'باجماعت':'With Jamaat'} 🟡=${LANG==='ur'?'اکیلے':'Alone'} ❌=${LANG==='ur'?'نہیں پڑھا':'Not Prayed'} ◯=${LANG==='ur'?'درج نہیں':'Blank'}</span>
       <span><button class="btn btn-green btn-sm" onclick="saveAtt('${key}')">${LANG==='ur'?'💾 محفوظ':'💾 Save'}</button></span></div>
-    <div class="namaz-wrap"><table class="namaz-table"><thead><tr>${th}</tr></thead><tbody>${rows}</tbody></table></div>
+    <div class="namaz-wrap" style="overflow-x:auto;max-width:100%;-webkit-overflow-scrolling:touch"><table class="namaz-table"><thead><tr>${th}</tr></thead><tbody>${rows}</tbody></table></div>
     <div style="margin-top:8px;font-size:11px;color:var(--subtext)">${t('signTeacher')}: .................. &nbsp; ${t('signParent')}: ..................</div>`;
 };
 
@@ -1170,11 +1179,11 @@ function renderMyStudents(){
   const cls=DB.classes.find(c=>c.id===CU.classId);
   document.getElementById('myStudTable').innerHTML=stus.length
     ?`<div style="margin-bottom:8px;font-size:13px;color:var(--subtext)">${LANG==='ur'?'درجہ':'Class'}: <b>${cls?cls.cat+'—'+cls.name:'—'}</b> | ${LANG==='ur'?'کل':'Total'}: <b>${stus.length}</b></div>`+
-      `<table><thead><tr><th>#</th><th>${t('thName')}</th><th>${t('thPhone')}</th><th>${LANG==='ur'?'حاضری':'Attendance'}</th><th>ID/Pass</th><th>${t('thPDF')}</th><th>WA</th><th>📅</th><th>✏️</th><th>${t('thDelete')}</th></tr></thead>
+      `<table><thead><tr><th>#</th><th>${t('thName')}</th><th>${t('thPhone')}</th><th>${LANG==='ur'?'نماز چارٹ':'Namaz Chart'}</th><th>${t('thPDF')}</th><th>WA</th></tr></thead>
       <tbody>${stus.map((s,i)=>`<tr><td>${i+1}</td><td>${s.name}</td><td>${s.phone||'—'}</td>
-      <td><button class="btn btn-green btn-xs" onclick="goToAtt('${s.id}')">📅</button></td>
+      <td><button class="btn btn-green btn-xs" onclick="goToAtt('${s.id}')">📅 ${LANG==='ur'?'چارٹ':'Chart'}</button></td>
       <td><button class="btn btn-blue btn-xs" onclick="exportStudentPDF('${s.id}')">📄</button></td>
-      <td>${s.phone?`<button class="btn btn-xs" style="background:#25d366;color:white" onclick="sendStudentWA('${s.id}')">📱 WA</button>`:'—'}</td></tr>`).join('')}</tbody></table>`
+      <td>${s.phone?`<button class="btn btn-xs" style="background:#25d366;color:white" onclick="sendStudentWA('${s.id}')">📱</button>`:'—'}</td></tr>`).join('')}</tbody></table>`
     :`<div class="empty">${t('noStudent')}</div>`;
 }
 
