@@ -317,7 +317,7 @@ tbody td{padding:7px 10px;vertical-align:middle;}
       <div class="card" style="padding:10px 14px">
         <div class="form-row" style="margin:0;align-items:flex-end">
           <div class="fg"><label id="lFCat">کیٹیگری</label>
-            <select id="fCat" onchange="setTimeout(()=>renderStudents(false),0)"><option value="">— سب —</option>
+            <select id="fCat" onchange="rebuildClsDrop(this.value);setTimeout(()=>renderStudents(false),0)"><option value="">— سب —</option>
               <option value="حفظ">حفظ</option><option value="دینیات">دینیات</option><option value="عالمیت">عالمیت</option></select></div>
           <div class="fg"><label id="lFCls">درجہ</label><select id="fCls" onchange="setTimeout(()=>renderStudents(false),0)"><option value="">— سب —</option></select></div>
           <div class="fg"><label id="lSearch">تلاش (نام / آئی ڈی / فون)</label><input id="fSearch" oninput="setTimeout(()=>renderStudents(false),0)" placeholder="نام، آئی ڈی، یا فون نمبر" /></div>
@@ -847,14 +847,14 @@ window.deleteStudent=async function(id){
 
 let _stuPage=0;const STU_PER_PAGE=20;
 // Rebuild fCls dropdown based on currently selected fCat
-function rebuildClsDrop(){
-  const cat=(document.getElementById('fCat')?.value||'').trim();
+function rebuildClsDrop(forceCat){
+  const cat=forceCat!==undefined?forceCat:(document.getElementById('fCat')?.value||'').trim();
   const fc=document.getElementById('fCls');
   if(!fc)return;
   const prev=fc.value;
   const cls=cat?DB.classes.filter(c=>c.cat===cat):DB.classes;
   fc.innerHTML=`<option value="">— ${LANG==='ur'?'سب':'All'} —</option>`+
-    cls.map(c=>`<option value="${c.id}" ${c.id===prev?'selected':''}>${c.cat}—${c.name}</option>`).join('');
+    cls.map(c=>`<option value="${c.id}" ${c.id===prev?'selected':''}>${c.name}</option>`).join('');
   // If prev class was from a different category, clear it
   if(prev && !cls.find(c=>c.id===prev)) fc.value='';
 }
